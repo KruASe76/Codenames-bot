@@ -20,7 +20,7 @@ cursor = base.cursor()
 cursor.execute('CREATE TABLE IF NOT EXISTS guilds (id int primary key, prefix text, players text, team1 text, team2 text, dark null)')
 cursor.execute('CREATE TABLE IF NOT EXISTS players (id int primary key, games int, games_cap int, wins int, wins_cap int)')
 
-# cursor.execute('INSERT INTO guilds VALUES (?,?,?,?,?,?)', (795556636748021770, '-', '', '', '', False))
+# cursor.execute('INSERT INTO guilds VALUES (?,?,?,?,?,?)', (795556636748021770, 'cdn ', '', '', '', False))
 
 # Creating bot
 def get_prefix(bot, message):
