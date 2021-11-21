@@ -81,7 +81,10 @@ async def help(ctx, command=''):
             for ind, arg in enumerate(arg_list):
                 if arg == 'is_final':
                     continue
-                args.append(f'[{arg}={default_args[ind]}]')
+                def_arg = default_args[ind]
+                if not def_arg.isdigit():
+                    def_arg = f'"{def_arg}"' # String type defaults stylization
+                args.append(f'[{arg}={def_arg}]')
             desc = f"**`{prefix}{name}{' ' if args else ''}{' '.join(args)}`**{ENTER*2 + comm.help if comm.help else ''}"
 
         help_embed = discord.Embed(
@@ -925,12 +928,12 @@ class SettingCommands(commands.Cog, name = 'Setting Commands'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
     
-    @commands.command(aliases=['pre'], help="Changes the bot's prefix")
-    async def prefix(self, ctx, new_prefix):
+    @commands.command(aliases=['pre'], brief="Changes the bot's prefix. Empty prefix -> default", help='Changes the bot\'s prefix.\nIf you wand to set it to default ("cdn ") do not input a new prefix')
+    async def prefix(self, ctx, new_prefix='cdn '):
         cursor.execute('UPDATE guilds SET prefix=? WHERE id=?', (new_prefix, ctx.guild.id))
         await ctx.message.add_reaction('✅')
     
-    @commands.command(brief='[SOON] Sets field image dark mode', help='[SOON] Sets field image dark mode.\nNote: endgame word will be drawn on a white card')
+    @commands.command(brief='[SOON] Sets field image dark mode', help='[SOON] Sets field image dark mode.\n\n**Note**: Endgame word will be drawn on a light-gray card')
     async def dark(self, ctx):
         cursor.execute('SELECT dark FROM guilds WHERE id=?', [(ctx.guild.id)])
         dark = cursor.fetchone()[0]
