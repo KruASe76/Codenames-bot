@@ -8,7 +8,7 @@ class UltraHD():
         self.y = 2160
 
 class Colors():
-    def __init__(self, dark:bool):
+    def __init__(self, dark:bool = False):
         self.red_fill = (255, 100, 80)
         self.red_font = (136, 16, 0)
         self.red_opened_fill = (255, 223, 219)
@@ -49,10 +49,7 @@ def multiple_choice(seq, k, return_seq=False): # non-repeatable
         return result
 
 
-def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words):
-    words = team1_words + team2_words + other_words + [endgame_word]
-    random.shuffle(words)
-
+def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order):
     img = Image.new('RGB', (uhd.x, uhd.y), (255, 255, 255))
     draw = ImageDraw.Draw(img)
     font = ImageFont.truetype(os.path.join('fonts', 'RobotoCondensed-Bold.ttf'), 80, encoding='utf-8')
@@ -103,7 +100,7 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
     # Filling tha captain's field
     for x in range(5):
         for y in range(5):
-            word = words[x*5 + y]
+            word = order[x*5 + y]
             if word in team1_words:
                 if word in opened_words:
                     fill_col = col.red_opened_fill
@@ -158,7 +155,7 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
                     50*(x+1) + 708*x + 708/2,
                     50*(y+1) + 292*y + 292/2
                 ),
-                text = word,
+                text = str(word),
                 fill = font_col,
                 font = font,
                 anchor = 'mm'
@@ -167,7 +164,7 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
     # Filling the players' field
     for x in range(5):
         for y in range(5):
-            word = words[x*5 + y]
+            word = order[x*5 + y]
             if word in opened_words:
                 if word in team1_words:
                     fill_col = col.red_fill
@@ -207,7 +204,7 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
                     50*(x+1) + 708*x + 708/2,
                     50*(y+1) + 292*y + 292/2
                 ),
-                text = word,
+                text = str(word),
                 fill = font_col,
                 font = font,
                 anchor = 'mm'
@@ -215,8 +212,6 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
 
     cap_img.save(os.path.join('images', 'cap_field.png'))
     pl_img.save(os.path.join('images', 'pl_field.png'))
-
-    return team1_words, team2_words, endgame_word, other_words, opened_words
 
 def words(lang, dict_name):
     dictionary = open(os.path.join(os.getcwd(), 'dictionaries', lang, f'{dict_name}.txt'), 'r', encoding='utf-8')
@@ -233,6 +228,5 @@ def words(lang, dict_name):
     else:
         team2_words, words1 = multiple_choice(words1, 9, True)
         team1_words, other_words = multiple_choice(words1, 8, True)
-    opened_words = []
     
-    return team1_words, team2_words, endgame_word, other_words, opened_words
+    return team1_words, team2_words, endgame_word, other_words

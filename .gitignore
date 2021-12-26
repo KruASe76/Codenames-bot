@@ -4,3 +4,4 @@
 *.db-journal
 
 /settings.json
+/base.db
