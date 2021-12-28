@@ -1,4 +1,3 @@
-
 from PIL import Image, ImageDraw, ImageFont
 import random, os
 
@@ -35,11 +34,11 @@ class Colors():
         self.white_opened_pl_font = (216, 207, 173)
 
 
-def multiple_choice(seq, k, return_seq=False): # non-repeatable
+def multiple_choice(seq, count, return_seq=False): # non-repeatable
     seq_type = type(seq)
     seq = list(seq)
     result = []
-    for _ in range(k):
+    for _ in range(count):
         result.append(random.choice(seq))
         seq.remove(result[-1])
 

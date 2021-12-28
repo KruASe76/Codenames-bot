@@ -1,16 +1,14 @@
 import discord
-from discord import colour
 from discord.ext import commands
 import os, sqlite3, json, inspect, asyncio, re, random
 import generation as gen
 
 # Setting defaults
-game_logo_link = "https://cdn.discordapp.com/attachments/797224818763104317/845081822329176114/codenames_logo.jpg"
-game_logo_path = os.path.join(os.getcwd(), "images", "codenames_logo.jpg")
+LOGO_LINK = "https://cdn.discordapp.com/attachments/797224818763104317/845081822329176114/codenames_logo.jpg"
 
-ENTER = "\n"
 ALPHABET = "ABCDEFGHIJKLMNOPQSTUVWXYZ" # Without letter R
 REACTION_ALPHABET = "🇦🇧🇨🇩🇪🇫🇬🇭🇮🇯🇰🇱🇲🇳🇴🇵🇶🇸🇹🇺🇻🇼🇽🇾🇿" # Without R too
+REACTION_NUMBERS = "1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣"
 
 # Getting the settings and the database
 with open(os.path.join(os.getcwd(), "settings.json"), "r") as settings_file:
@@ -20,21 +18,26 @@ base = sqlite3.connect(os.path.join(os.getcwd(), "base.db"))
 cursor = base.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS guilds (id int primary key, prefix text, players text, team1 text, team2 text, dark null)")
 cursor.execute("CREATE TABLE IF NOT EXISTS players (id int primary key, games int, games_cap int, wins int, wins_cap int)")
+base.commit()
 
-# cursor.execute("INSERT INTO guilds VALUES (?,?,?,?,?,?)", (795556636748021770, "cdn ", "", "", "", False))
+# cursor.execute("INSERT INTO guilds VALUES (?,?,?,?,?,?)", (795556636748021770, "", "", "", "", False))
 
 # Creating bot
 def get_prefix(bot, message):
     if message.guild:
         cursor.execute("SELECT prefix FROM guilds WHERE id=?", [(message.guild.id)])
-        return cursor.fetchone()[0]
+        prefix = cursor.fetchone()[0]
+        res = (prefix, "cdn ") if prefix else ("cdn ",)
     else:
-        return ("cdn ", "!", "-")
+        res = ("cdn ", "!", "-")
+    
+    return commands.when_mentioned_or(*res)(bot, message)
 
 bot = commands.Bot(command_prefix=get_prefix, help_command=None, owner_id=689766059712315414)
 
 # Checks
 is_chief = commands.check(lambda ctx: ctx.message.author.id == bot.owner_id)
+is_moderator = commands.check(lambda ctx: ctx.message.author.permissions_in(ctx.channel).manage_messages)
 
 # Events
 @bot.event
@@ -42,25 +45,44 @@ async def on_ready():
     await bot.change_presence(activity = discord.Activity(type=discord.ActivityType.watching, name="codenames.me"))
 
 @bot.event
+async def on_message(message):
+    if message.content in (f"<@!{bot.user.id}>", f"<@!{bot.user.id}> "): # too lazy to use regex
+        help_comm = bot.get_command("help")
+        await help_comm.__call__(message)
+    
+    await bot.process_commands(message)
+
+@bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         pass
     elif isinstance(error, commands.CheckFailure):
         await ctx.reply(embed = discord.Embed(
-            title = ":no_entry_sign: Forbidden",
-            colour = discord.Colour(int("8d08d2", 16))
+            title = "You have no permission to call this command",
+            colour = discord.Colour(int("ff6450", 16))
         ))
     else:
         raise error
 
 @bot.event
 async def on_guild_join(guild):
-    cursor.execute("INSERT INTO guilds VALUES (?,?,?,?,?,?)", (guild.id, "cdn ", "", "", "", False))
+    cursor.execute("INSERT INTO guilds VALUES (?,?,?,?,?,?)", (guild.id, "", "", "", "", False))
+    base.commit()
+
+@bot.event
+async def on_guild_remove(guild):
+    cursor.execute("DELETE FROM guilds WHERE id=?", (guild.id,))
+    base.commit()
 
 # Help
 @bot.command()
 async def help(ctx, command=None):
-    prefix = ctx.message.content.split("help")[0] # Getting a prefix used when calling
+    try:
+        message = ctx.message
+    except AttributeError: # If invoked from on_message (line 46)
+        message = ctx
+    prefix = message.content.split("help")[0] # Getting a prefix used when calling
+    prefix = "cdn " if prefix in (f"<@!{bot.user.id}>", f"<@!{bot.user.id}> ") else prefix # too lazy to use regex
 
     if command:
         comm = bot.get_command(command)
@@ -69,13 +91,13 @@ async def help(ctx, command=None):
             desc = "Command not found"
             col = discord.Colour(int("ff6450", 16))
         else:
-            title = comm.cog_name[:-1]
+            title = comm.cog_name[:-1] # Removing "..s" to get not plural, but singular
             col = discord.Colour(int("8d08d2", 16))
 
             comm_info = inspect.getfullargspec(comm._callback)
-            arg_list = comm_info.args[2:]
-            default_args = list(comm_info.defaults) if comm_info.defaults else []
-            names = [comm.name] + [alias for alias in comm.aliases]
+            arg_list = comm_info.args[2:] # Removing "self" and "ctx"
+            default_args = comm_info.defaults if comm_info.defaults else ()
+            names = (comm.name,) + comm.aliases
             name = "{" + "|".join(names) + "}"
             args = []
             while len(arg_list) > len(default_args):
@@ -91,35 +113,34 @@ async def help(ctx, command=None):
                 else:
                     def_arg = None
                 args.append(f"[{arg}={def_arg}]")
-            desc = f"**`{prefix}{name}{' ' if args else ''}{' '.join(args)}`**{ENTER*2 + comm.help if comm.help else ''}"
+            allowed1 = "**[Moderator]**\n" if is_moderator.predicate.__wrapped__ in comm.checks else ""
+            allowed2 = "\n\n_**Note:**\nModerator is the member who can manage messages in the channel where the command was called_"
+            desc = f"**`{prefix}{name}{' ' if args else ''}{' '.join(args)}`**\n\n{allowed1}{comm.help}{allowed2}"
 
         help_embed = discord.Embed(
             title = title,
             description = desc,
             colour = col
         )
-
     else:
         help_embed = discord.Embed(
             title = "Command list",
             colour = discord.Colour(int("8d08d2", 16))
         )
-        help_embed.set_thumbnail(url = game_logo_link)
+        help_embed.set_thumbnail(url = LOGO_LINK)
 
-        for cog_name, cog in dict(bot.cogs).items():
-            cog_comms = []
-            for comm in cog.get_commands():
-                brief = comm.brief if comm.brief else comm.help
-                cog_comms.append(f"**`{prefix}{comm.name}`**{' - ' + brief if brief else ''}")
+        for cog_name, cog in bot.cogs.items():
+            allowed = lambda comm: "**[Mod]** " if is_moderator.predicate.__wrapped__ in comm.checks else ""
+            cog_comms = map(lambda comm: f"**`{prefix}{comm.name}`** - {allowed(comm)}{comm.brief if comm.brief else comm.help}", cog.get_commands())
             help_embed.add_field(name=cog_name, value="\n".join(cog_comms), inline=False)
         
         help_embed.add_field(
             name = chr(int("2063", 16)),
-            value = f"To learn a more detailed description of the command, type\n**`{prefix}help [command]`**",
+            value = f"**To learn a more detailed description of the command, type**\n**`{prefix}help [command]`**",
             inline = False
         )
 
-    await ctx.reply(embed = help_embed)
+    await message.reply(embed = help_embed)
 
 # Cogs
 class GameCommands(commands.Cog, name = "Game Commands"):
@@ -127,8 +148,8 @@ class GameCommands(commands.Cog, name = "Game Commands"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
     
-    @commands.command(aliases=["register", "reg", "r"], brief="Registrates the user for the game",
-        help="Registrates the user for the game.\nIf you won't enter the team number it will be selected randomly when the game starts."
+    @commands.command(aliases=("register", "reg", "r"), brief="Registers the user for the game",
+        help="Registers the user for the game.\nIf you won't enter the team number it will be selected randomly when the game starts.\nTo change the team call the commang again with another argument; to reset team, do not input the argument"
     )
     async def ready(self, ctx, team_number:int = 0):
         cursor.execute("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
@@ -137,42 +158,48 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         team1 = [await self.bot.fetch_user(id) for id in team1]
         team2 = [await self.bot.fetch_user(id) for id in team2]
 
-        if ctx.author not in players + team1 + team2:
-            if not team_number:
-                players.append(ctx.author)
-            elif team_number == 1:
-                team1.append(ctx.author)
-            elif team_number == 2:
-                team2.append(ctx.author)
-            else:
+        if ctx.author in players + team1 + team2:
+            if (ctx.author in players and team_number == 0) or (ctx.author in team1 and team_number == 1) or (ctx.author in team2 and team_number == 2):
                 await ctx.reply(embed = discord.Embed(
-                    title = "Invalid team number",
-                    description = "There are only 2 teams in the game.\nSelect one of them or don't type the number to shuffle randomly",
-                    colour = discord.Colour(int("8d08d2", 16))
+                    title = "Error",
+                    description = "You're already in that team!",
+                    colour = discord.Colour(int("ff6450", 16)),
                 ))
-            cursor.execute("SELECT id FROM players")
-            if ctx.author.id not in [tup[0] for tup in cursor.fetchall()]:
-                cursor.execute("INSERT INTO players VALUES (?,?,?,?,?)", (ctx.author.id, 0, 0, 0, 0))
+                return
+
+            leave_comm = bot.get_command("leave") # Removing author from any team, then processing main code
+            await leave_comm.__call__(ctx) # Changes are not visible from this function running
             
-            await ctx.message.add_reaction("✅")
+            if ctx.author in players: # Getting again needed player list
+                cursor.execute("SELECT players FROM guilds WHERE id=?", (ctx.guild.id,))
+                players = map(int, cursor.fetchone()[0].split())
+                players = [await self.bot.fetch_user(id) for id in players]
+            if ctx.author in team1:
+                cursor.execute("SELECT team1 FROM guilds WHERE id=?", (ctx.guild.id,))
+                team1 = map(int, cursor.fetchone()[0].split())
+                team1 = [await self.bot.fetch_user(id) for id in team1]
+            if ctx.author in team2:
+                cursor.execute("SELECT team2 FROM guilds WHERE id=?", (ctx.guild.id,))
+                team2 = map(int, cursor.fetchone()[0].split())
+                team2 = [await self.bot.fetch_user(id) for id in team2]
+        
+        if team_number == 0:
+            players.append(ctx.author)
+        elif team_number == 1:
+            team1.append(ctx.author)
+        elif team_number == 2:
+            team2.append(ctx.author)
         else:
             await ctx.reply(embed = discord.Embed(
-                title = "You're already in player list",
-                description = "Do you want to quit the game? (y/n)",
+                title = "Invalid team number",
+                description = "There are only 2 teams in the game.\nSelect one of them or don't type the number to shuffle randomly",
                 colour = discord.Colour(int("8d08d2", 16))
             ))
+        cursor.execute("SELECT id FROM players")
+        if ctx.author.id not in [tup[0] for tup in cursor.fetchall()]:
+            cursor.execute("INSERT INTO players VALUES (?,?,?,?,?)", (ctx.author.id, 0, 0, 0, 0))
 
-            reply = await self.bot.wait_for("message", check=lambda msg: msg.content.lower() in ["y", "n"] and msg.author == ctx.author and msg.channel == ctx.channel)
-            if reply.content.lower() == "y":
-                if reply.author in players:
-                    players.remove(reply.author)
-                elif reply.author in team1:
-                    team1.remove(reply.author)
-                elif reply.author in team2:
-                    team2.remove(reply.author)
-                await reply.add_reaction("✅")
-            else:
-                await reply.add_reaction("🆗")
+        await ctx.message.add_reaction("✅")
         
         players_id = map(lambda p: str(p.id), players)
         team1_id = map(lambda p: str(p.id), team1)
@@ -181,9 +208,11 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             "UPDATE guilds SET players=?, team1=?, team2=? WHERE id=?",
             (" ".join(players_id), " ".join(team1_id), " ".join(team2_id), ctx.guild.id)
         )
+
+        await ctx.message.delete(delay=3)
     
 
-    @commands.command(aliases=["l", "unreg"], help="Unregisters the user from the game")
+    @commands.command(aliases=("l", "unreg"), help="Unregisters the user from the game")
     async def leave(self, ctx):
         cursor.execute("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
         players, team1, team2 = map(lambda var: map(int, var.split()), cursor.fetchone())
@@ -216,8 +245,10 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             (" ".join(players_id), " ".join(team1_id), " ".join(team2_id), ctx.guild.id)
         )
 
+        await ctx.message.delete(delay=3)
 
-    @commands.command(name="players", aliases=["ps"], help="Shows registered players")
+
+    @commands.command(name="players", aliases=("ps",), help="Shows registered players")
     async def show_players(self, ctx, final=False):
         async with ctx.typing():
             cursor.execute("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
@@ -227,52 +258,56 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             team2 = [await self.bot.fetch_user(id) for id in team2]
 
             players_embed = discord.Embed(
-                title="Final player list" if final else "Player list",
-                colour=discord.Colour(int("8d08d2", 16))
+                title = "Final player list" if final else "Player list",
+                colour = discord.Colour(int("8d08d2", 16))
             )
             if team1:
-                players_embed.add_field(name="Team 1", value="\n".join(p.mention for p in team1))
+                players_embed.add_field(name="Team 1", value="\n".join(map(lambda p: p.mention, team1)))
             if players:
-                players_embed.add_field(name="No Team", value="\n".join(p.mention for p in players))
+                players_embed.add_field(name="No Team", value="\n".join(map(lambda p: p.mention, players)))
             if team2:
-                players_embed.add_field(name="Team 2", value="\n".join(p.mention for p in team2))
+                players_embed.add_field(name="Team 2", value="\n".join(map(lambda p: p.mention, team2)))
 
             if players or team1 or team2:
                 await ctx.reply(embed = players_embed)
             else:
                 await ctx.reply(embed = discord.Embed(
-                    title = "Player_list",
+                    title = "Player list",
                     description = "Nobody is ready to play",
                     colour = discord.Colour(int("8d08d2", 16))
                 ))
 
 
-    @commands.command(aliases=["s"], brief="Starts the game",
+    @commands.command(aliases=("s",), brief="Starts the game",
         help="Starts the game.\nIf there are players without a team they will be evenly distributed among the teams."
     )
     async def start(self, ctx):
-        async with ctx.typing():
+        def get_most_count_reaction_emojis(msg):
+            reactions = filter(lambda r: r.me, msg.reactions)
+            max_count = max(reactions, key=lambda r: r.count).count
+            reactions = filter(lambda r: r.count == max_count, reactions)
+            return map(lambda r: r.emoji, reactions)
+
+        async with ctx.typing(): # Final player list preparation and show
             cursor.execute("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
             players, team1, team2 = map(lambda var: map(int, var.split()), cursor.fetchone())
             players = [await self.bot.fetch_user(id) for id in players]
             team1 = [await self.bot.fetch_user(id) for id in team1]
             team2 = [await self.bot.fetch_user(id) for id in team2]
 
-            # Dividing players into two teams randomly
-            if players:
+            if players: # Dividing players into two teams randomly
                 random.shuffle(players)
                 for member in players:
                     if len(team1) <= len(team2):
                         team1.append(member)
                     else:
                         team2.append(member)
-                    players.remove(member)
             
             if len(team1) < 2 or len(team2) < 2:
                 await ctx.reply(embed = discord.Embed(
                     title = "Error",
                     description = "There are not enough players.\nIt has to be at least 2 players in each team.",
-                    colour = discord.Colour(int("8d08d2", 16))
+                    colour = discord.Colour(int("ff6450", 16))
                 ))
                 return
             
@@ -280,23 +315,23 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                 await ctx.reply(embed = discord.Embed(
                     title = "Error",
                     description = "There are too much players.\nIt has **not** to be more than 25 players in each team.",
-                    colour = discord.Colour(int("8d08d2", 16))
+                    colour = discord.Colour(int("ff6450", 16))
                 ))
                 return
-            
-            players_id = map(lambda p: str(p.id), players)
+
             team1_id = map(lambda p: str(p.id), team1)
             team2_id = map(lambda p: str(p.id), team2)
             cursor.execute(
                 "UPDATE guilds SET players=?, team1=?, team2=? WHERE id=?",
-                (" ".join(players_id), " ".join(team1_id), " ".join(team2_id), ctx.guild.id)
+                ("", " ".join(team1_id), " ".join(team2_id), ctx.guild.id) # There are no players without team left
             )
             
             final_show = self.bot.get_command("players")
             await final_show.__call__(ctx, final=True)
-        asyncio.sleep(2)
+        await asyncio.sleep(2)
 
-        choosing_dict = {
+
+        selecting_dict = {
             "en": {
                 "std":      "Original English dictionary (400 words)",
                 "duet":     "Original Duet dictionary (400 words)",
@@ -324,56 +359,44 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             description = "**en** - English\n**ru** - Russian\n\nType answer in the following message",
             colour = discord.Colour(int("8d08d2", 16))
         ))
-        language = await self.bot.wait_for("message", check=lambda msg: msg.content.lower() in list(choosing_dict.keys()) and msg.channel == ctx.channel)
+        language = await self.bot.wait_for("message", check=lambda msg: msg.content.lower() in selecting_dict.keys() and msg.channel == ctx.channel)
         language = language.content.lower()
 
-        choose_dict_msg = [f"**{key}** - {val}" for key, val in choosing_dict[language].items()]
-        await ctx.send(embed = discord.Embed(
+        dict_msg_desc = map(lambda key, val, num: f"**{num}) {key}** - {val}", selecting_dict[language].items(), range(1, 10))
+        dict_msg = await ctx.send(embed = discord.Embed(
             title = "Select dictionary",
-            description = "\n".join(choose_dict_msg) + "\n\nType answer in the following message",
+            description = "\n".join(dict_msg_desc) + "\n\nYou have 15 seconds to vote",
             colour = discord.Colour(int("8d08d2", 16))
         ))
-        game_dict_name = await self.bot.wait_for("message", check=lambda msg: msg.content.lower() in list(choosing_dict[language].keys()) and msg.channel == ctx.channel)
-        game_dict_name = game_dict_name.content.lower()
+        for ind, _ in enumerate(selecting_dict[language].items()):
+            await dict_msg.add_reaction(REACTION_NUMBERS[ind])
+        await asyncio.sleep(15)
+
+        new_dict_msg = await ctx.channel.fetch_message(dict_msg.id)
+        emojis = get_most_count_reaction_emojis(new_dict_msg)
+
+        potential_dicts = map(lambda em: selecting_dict[language].keys()[REACTION_NUMBERS.index(em)], emojis)
+        game_dict_name = random.choice(potential_dicts)
 
 
-        cap_choosing_list = [f"**{ALPHABET[ind]}** - {player.mention}" for ind, player in enumerate(team1)]
-        await ctx.send(embed = discord.Embed(
+        cap_selecting_list = map(lambda ind, player: f"**{ALPHABET[ind]}** - {player.mention}", enumerate(team1))
+        cap_msg = await ctx.send(embed = discord.Embed(
             title = "RED team: Captain selecting",
-            description = "**R** - Random captain\n\n" + "\n".join(cap_choosing_list) + "\n\nYou have 10 seconds to vote",
+            description = "**R** - Random captain\n\n" + "\n".join(cap_selecting_list) + "\n\nYou have 15 seconds to vote",
             colour = discord.Colour(int("ff6450", 16))
         ))
-        async for msg in ctx.channel.history():
-            if msg.author == bot.user:
-                break
-        await msg.add_reaction("🇷")
-        for ind, player in enumerate(team1):
-            await msg.add_reaction(REACTION_ALPHABET[ind])
+        await cap_msg.add_reaction("🇷")
+        for ind, _ in enumerate(team1):
+            await cap_msg.add_reaction(REACTION_ALPHABET[ind])
+        await asyncio.sleep(15)
+
+        new_cap_msg = await ctx.channel.fetch_message(cap_msg.id) # Have to get the message object again with reactions in it
+        emojis = get_most_count_reaction_emojis(new_cap_msg)
         
-        asyncio.sleep(10)
-        async for msg in ctx.channel.history(): # Have to get the message object again with reactions in it
-            if msg.author == bot.user:
-                break
-        reactions = msg.reactions
-        reactions.sort(key = lambda r: r.count, reverse = True)
-        for reaction in reactions: # getting max_count with checking if it is a required emoji
-            if reaction.me:
-                max_count = reaction.count
-                break
-        winner_reactions = []
-        for reaction in reactions:
-            if reaction.count < max_count:
-                break
-            if reaction.me: # not appending outsider emojies
-                winner_reactions.append(reaction.emoji)
-        
-        if "🇷" in winner_reactions:
+        if "🇷" in emojis:
             team1_cap = random.choice(team1)
         else:
-            potential_caps = []
-            for emoji in winner_reactions:
-                ind = REACTION_ALPHABET.index(emoji)
-                potential_caps.append(team1[ind])
+            potential_caps = map(lambda em: team1[REACTION_ALPHABET.index(em)], emojis)
             team1_cap = random.choice(potential_caps)
         team1_pl = team1.copy()
         team1_pl.remove(team1_cap)
@@ -385,44 +408,24 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         ))
 
         # The same code for team2_cap
-        cap_choosing_list = [f"**{ALPHABET[ind]}** - {player.mention}" for ind, player in enumerate(team2)]
-        await ctx.send(embed = discord.Embed(
+        cap_selecting_list = map(lambda ind, player: f"**{ALPHABET[ind]}** - {player.mention}", enumerate(team2))
+        msg = await ctx.send(embed = discord.Embed(
             title = "BLUE team: Captain selecting",
-            description = "**R** - Random captain\n\n" + "\n".join(cap_choosing_list) + "\n\nYou have 10 seconds to vote",
+            description = "**R** - Random captain\n\n" + "\n".join(cap_selecting_list) + "\n\nYou have 15 seconds to vote",
             colour = discord.Colour(int("50bbff", 16))
         ))
-        async for msg in ctx.channel.history():
-            if msg.author == bot.user:
-                break
         await msg.add_reaction("🇷")
-        for ind, player in enumerate(team2):
+        for ind, _ in enumerate(team2):
             await msg.add_reaction(REACTION_ALPHABET[ind])
+        await asyncio.sleep(15)
+
+        new_cap_msg = await ctx.channel.fetch_message(cap_msg.id) # Have to get the message object again with reactions in it
+        emojis = get_most_count_reaction_emojis(new_cap_msg)
         
-        asyncio.sleep(10)
-        async for msg in ctx.channel.history(): # Have to get the message object again with reactions in it
-            if msg.author == bot.user:
-                break
-        reactions = msg.reactions
-        reactions.sort(key = lambda r: r.count, reverse = True)
-        for reaction in reactions: # getting max_count and removing outsider reactions with the same or more count than max_count
-            if reaction.me:
-                max_count = reaction.count
-                break
-            else:
-                reactions.remove(reaction)
-        winner_reactions = []
-        for reaction in reactions:
-            if reaction.count < max_count:
-                break
-            winner_reactions.append(reaction.emoji)
-        
-        if "🇷" in winner_reactions:
+        if "🇷" in emojis:
             team2_cap = random.choice(team2)
         else:
-            potential_caps = []
-            for emoji in winner_reactions:
-                ind = REACTION_ALPHABET.index(emoji)
-                potential_caps.append(team2[ind])
+            potential_caps = map(lambda em: team2[REACTION_ALPHABET.index(em)], emojis)
             team2_cap = random.choice(potential_caps)
         team2_pl = team2.copy()
         team2_pl.remove(team2_cap)
@@ -439,7 +442,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             colour = discord.Colour(int("8d08d2", 16))
         ))
         
-        # notifying everyone in direct messages
+        # Notifying everyone in direct messages
         await team1_cap.send(embed = discord.Embed(
             title = "Game started",
             description = "**You're the captain of the RED team**\n\nYour teammates are:\n" + "\n".join([p.mention for p in team1_pl]),
@@ -448,7 +451,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         for player in team1_pl:
             team1_pl_without = team1_pl.copy() # Team1 player list without recipient of the message
             team1_pl_without.remove(player)
-            player.send(embed = discord.Embed(
+            await player.send(embed = discord.Embed(
                 title = "Game started",
                 description = f"**You're the member of the RED team**\n\nThe captain of your team is {team1_cap.mention}\nYour teammates are:\n" + "\n".join([p.mention for p in team1_pl_without]),
                 colour = discord.Colour(int("ff6450", 16))
@@ -462,7 +465,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         for player in team2_pl:
             team2_pl_without = team2_pl.copy() # Team2 player list without recipient of the message
             team2_pl_without.remove(player)
-            player.send(embed = discord.Embed(
+            await player.send(embed = discord.Embed(
                 title = "Game started",
                 description = f"**You're the member of the BLUE team**\n\nThe captain of your team is {team2_cap.mention}\nYour teammates are:\n" + "\n".join([p.mention for p in team2_pl_without]),
                 colour = discord.Colour(int("50bbff", 16))
@@ -535,15 +538,53 @@ class GameCommands(commands.Cog, name = "Game Commands"):
 
             await ctx.send(embed = discord.Embed(
                 title = "Waiting for move",
-                description = f"Players of **{first_move_color}** team\n\n Type words you want to open in the following messages. If you want to break the move type **`0`**",
+                description = f"Players of **{first_move_color}** team\n\nType words you want to open in the following messages.\nIf you want to **BREAK THE MOVE** type **`0`**\nIf you want to **STOP THE GAME** type **`000`**",
                 colour = discord.Colour(int("ff6450" if first_move_color=="RED" else "50bbff", 16))
             ))
             while word_count >= 0: # >= because of the rule that players can open one more word than their captain supposed to
-                move_msg = await self.bot.wait_for("message", check=lambda msg: (msg.content.lower() in available_words or msg.content == "0") and msg.channel == ctx.channel and msg.author in first_move_pl)
+                move_msg = await self.bot.wait_for("message", check=lambda msg: (msg.content.lower() in available_words or msg.content == "0" or msg.content == "000") and msg.channel == ctx.channel and msg.author in first_move_pl)
                 move = move_msg.content.lower()
                 if move == "0":
                     move_msg.add_reaction("🆗")
                     break
+                if move == "000":
+                    game_stop_msg = move_msg.reply(embed = discord.Embed(
+                        title = "Stopping the game",
+                        description = "**Do you really want to stop playing?**\n\nAll players have 15 seconds to vote",
+                        colour = discord.Colour(int("ff6450"))
+                    ))
+                    await game_stop_msg.add_reaction("👍")
+                    await game_stop_msg.add_reaction("👎")
+                    await asyncio.sleep(15)
+
+                    async for msg in ctx.channel.history(): # Have to get the message object again with reactions in it
+                        if msg.author == bot.user:
+                            break
+                    for reaction in msg.reactions:
+                        if reaction.emoji == "👍":
+                            upvotes = reaction.count
+                        elif reaction.emoji == "👎":
+                            downvotes = reaction.count
+                        else:
+                            continue
+                    
+                    if upvotes > downvotes:
+                        ctx.send(embed = discord.Embed(
+                            title = "GAME STOPPED",
+                            description = "Most players voted for game stopping",
+                            colour = discord.Colour(int("8d08d2", 16))
+                        ))
+
+                        game = False
+                        break
+                    else:
+                        ctx.send(embed = discord.Embed(
+                            title = "GAME CONTINUED",
+                            description = "Most players voted against game stopping",
+                            colour = discord.Colour(int("8d08d2", 16))
+                        ))
+                        
+                        continue # No need to generate a new field or decrease loop variable
                 
                 opened_words.append(move)
                 available_words.remove(move)
@@ -555,17 +596,17 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     await move_msg.reply(embed = discord.Embed(
                         title = "Miss",
                         description = "Unfortunately, this word **doesn't belong to any team**",
-                        colour = discord.Colour(int("ffffff", 16))
+                        colour = discord.Colour(int("dddddd", 16))
                     ))
                     await first_move_cap.send(embed = discord.Embed(
                         title = "Miss",
                         description = f"Your team opened the word **`{move}`** that **doesn't belong to any team**",
-                        colour = discord.Colour(int("ffffff", 16))
+                        colour = discord.Colour(int("dddddd", 16))
                     ))
                     await second_move_cap.send(embed = discord.Embed(
                         title = "Lucky!",
                         description = f"The opponent team opened the word **`{move}`** that **doesn't belong to any team**",
-                        colour = discord.Colour(int("ffffff", 16))
+                        colour = discord.Colour(int("dddddd", 16))
                     ))
                 elif move in second_move_words:
                     await move_msg.reply(embed = discord.Embed(
@@ -672,6 +713,8 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                 await ctx.send(file = pl_field)
                 await first_move_cap.send(file = cap_field)
                 await second_move_cap.send(file = cap_field)
+
+                word_count -= 1
             
             if not game: # checking if the game is over if it is so after first team move
                 break
@@ -709,15 +752,53 @@ class GameCommands(commands.Cog, name = "Game Commands"):
 
             await ctx.send(embed = discord.Embed(
                 title = "Waiting for move",
-                description = f"Players of **{second_move_color}** team\n\n Type words you want to open in the following messages. If you want to break the move type **`0`**",
+                description = f"Players of **{second_move_color}** team\n\nType words you want to open in the following messages.\nIf you want to **BREAK THE MOVE** type **`0`**\nIf you want to **STOP THE GAME** type **`000`**",
                 colour = discord.Colour(int("ff6450" if second_move_color=="RED" else "50bbff", 16))
             ))
             while word_count >= 0: # >= because of the rule that players can open one more word than their captain said
-                move_msg = await self.bot.wait_for("message", check=lambda msg: (msg.content.lower() in available_words or msg.content == "0") and msg.channel == ctx.channel and msg.author in second_move_pl)
+                move_msg = await self.bot.wait_for("message", check=lambda msg: (msg.content.lower() in available_words or msg.content == "0" or msg.content == "000") and msg.channel == ctx.channel and msg.author in second_move_pl)
                 move = move_msg.content.lower()
                 if move == "0":
                     move_msg.add_reaction("🆗")
                     break
+                if move == "000":
+                    game_stop_msg = move_msg.reply(embed = discord.Embed(
+                        title = "Stopping the game",
+                        description = "**Do you really want to stop playing?**\n\nAll players have 15 seconds to vote",
+                        colour = discord.Colour(int("ff6450"))
+                    ))
+                    await game_stop_msg.add_reaction("👍")
+                    await game_stop_msg.add_reaction("👎")
+                    await asyncio.sleep(15)
+
+                    async for msg in ctx.channel.history(): # Have to get the message object again with reactions in it
+                        if msg.author == bot.user:
+                            break
+                    for reaction in msg.reactions:
+                        if reaction.emoji == "👍":
+                            upvotes = reaction.count
+                        elif reaction.emoji == "👎":
+                            downvotes = reaction.count
+                        else:
+                            continue
+                    
+                    if upvotes > downvotes:
+                        ctx.send(embed = discord.Embed(
+                            title = "GAME STOPPED",
+                            description = "Most players voted for game stopping",
+                            colour = discord.Colour(int("8d08d2", 16))
+                        ))
+
+                        game = False
+                        break
+                    else:
+                        ctx.send(embed = discord.Embed(
+                            title = "GAME CONTINUED",
+                            description = "Most players voted against game stopping",
+                            colour = discord.Colour(int("8d08d2", 16))
+                        ))
+                        
+                        continue # No need to generate a new field or decrease loop variable
                 
                 opened_words.append(move)
                 available_words.remove(move)
@@ -729,17 +810,17 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     await move_msg.reply(embed = discord.Embed(
                         title = "Miss",
                         description = "Unfortunately, this word **doesn't belong to any team**",
-                        colour = discord.Colour(int("ffffff", 16))
+                        colour = discord.Colour(int("dddddd", 16))
                     ))
                     await second_move_cap.send(embed = discord.Embed(
                         title = "Miss",
                         description = f"Your team opened the word **`{move}`** that **doesn't belong to any team**",
-                        colour = discord.Colour(int("ffffff", 16))
+                        colour = discord.Colour(int("dddddd", 16))
                     ))
                     await first_move_cap.send(embed = discord.Embed(
                         title = "Lucky!",
                         description = f"The opponent team opened the word **`{move}`** that **doesn't belong to any team**",
-                        colour = discord.Colour(int("ffffff", 16))
+                        colour = discord.Colour(int("dddddd", 16))
                     ))
                 elif move in first_move_words:
                     await move_msg.reply(embed = discord.Embed(
@@ -847,13 +928,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                 await first_move_cap.send(file = cap_field)
                 await second_move_cap.send(file = cap_field)
 
+                word_count -= 1
+
         cursor.execute(
             "UPDATE guilds SET players=?, team1=?, team2=? WHERE id=?",
             ("", "", "", ctx.guild.id)
         )
+        base.commit()
 
 
-    @commands.command(aliases=["st", "ss"], help="Shows player's statistics")
+    @commands.command(aliases=("st", "ss"), help="Shows player's statistics")
     async def stats(self, ctx, member:discord.Member=None):
         # Codenames is a **TEAM PLAY**, so the winrate statistics do **NOT** exactly show player's skill
         if not member:
@@ -887,6 +971,17 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         await ctx.reply(embed = stats_embed)
     
 
+    @commands.command(aliases=("c", "cl", "clr"), help="Clears registered players list")
+    @is_moderator
+    async def clear(self, ctx):
+        cursor.execute(
+            "UPDATE guilds SET players=?, team1=?, team2=? WHERE id=?",
+            ("", "", "", ctx.guild.id)
+        )
+        await ctx.message.add_reaction("✅")
+        await ctx.message.delete(delay=3)
+
+
     @commands.command()
     async def demo_start(self, ctx):
         cursor.execute("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
@@ -895,7 +990,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         team1 = [await self.bot.fetch_user(id) for id in team1]
         team2 = [await self.bot.fetch_user(id) for id in team2]
 
-        choosing_dict = {
+        selecting_dict = {
             "en": {
                 "std": "Original English dictionary (400 words)",
                 "duet": "Original Duet dictionary (400 words)",
@@ -923,16 +1018,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             description = "**en** - English\n**ru** - Russian\n\nType answer in the following message",
             colour = discord.Colour(int("8d08d2", 16))
         ))
-        language = await self.bot.wait_for("message", check=lambda msg: msg.content.lower().startswith(tuple(choosing_dict.keys())) and msg.channel == ctx.channel)
+        language = await self.bot.wait_for("message", check=lambda msg: msg.content.lower().startswith(tuple(selecting_dict.keys())) and msg.channel == ctx.channel)
         language = language.content.lower()
 
-        dict_choose_list = [f"**{key}** - {val}" for key, val in choosing_dict[language].items()]
+        dict_choose_list = [f"**{key}** - {val}" for key, val in selecting_dict[language].items()]
         await ctx.send(embed = discord.Embed(
             title = "Select dictionary",
             description = "\n".join(dict_choose_list),
             colour = discord.Colour(int("8d08d2", 16))
         ))
-        dictionary = await self.bot.wait_for("message", check=lambda msg: msg.content.lower().startswith(tuple(choosing_dict[language].keys())) and msg.channel == ctx.channel)
+        dictionary = await self.bot.wait_for("message", check=lambda msg: msg.content.lower().startswith(tuple(selecting_dict[language].keys())) and msg.channel == ctx.channel)
 
         await ctx.send(embed = discord.Embed(
             title = "GAME STARTED!",
@@ -1014,7 +1109,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
 
     @commands.command()
     async def test(self, ctx):
-        pass
+        await ctx.message.add_reaction("1️⃣")
 
 
 class SettingCommands(commands.Cog, name = "Setting Commands"):
@@ -1022,20 +1117,27 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
     
-    @commands.command(aliases=["pre"], brief="Changes the bot's prefix. Empty prefix -> default", help='Changes the bot\'s prefix.\nIf you wand to set it to default ("cdn ") do not input a new prefix')
+    @commands.command(aliases=("pre",), brief="Changes the bot's prefix. Empty prefix -> default", help='Changes the bot\'s prefix.\nIf you wand to set it to default ("cdn ") do not input a new prefix')
     async def prefix(self, ctx, new_prefix="cdn "):
-        cursor.execute("UPDATE guilds SET prefix=? WHERE id=?", (new_prefix, ctx.guild.id))
-        await ctx.message.add_reaction("✅")
+        prefix = "" if new_prefix == "cdn " else new_prefix
+        cursor.execute("UPDATE guilds SET prefix=? WHERE id=?", (prefix, ctx.guild.id))
+        base.commit()
+
+        await ctx.send(embed=discord.Embed(
+            title = "Prefix changed",
+            description = (f"New prefix for this server:\n**`{prefix}`**\n" if prefix else "Custom prefix for this server deleted") + "\nDefault one **`cdn `** and bot ping are still valid",
+            colour = discord.Colour(int("8d08d2", 16))
+        ))
     
 
-    @commands.command(brief="[In dev] Sets field image dark mode", help="[In dev] Sets field image dark mode.\n\n**Note**: Endgame word will be drawn on a light-gray card")
+    @commands.command(help="[In dev] Sets field image dark mode")
     async def dark(self, ctx):
         cursor.execute("SELECT dark FROM guilds WHERE id=?", [(ctx.guild.id)])
         dark = cursor.fetchone()[0]
 
         await ctx.send(embed = discord.Embed(
             title = "Dark mode",
-            description = f"Field dark mode is now **{'ON' if dark else 'OFF'}**.\nDo you want to switch it **{'OFF' if dark else 'ON'}**? (y/n)",
+            description = f"Field dark mode is now **{'ON' if dark else 'OFF'}**.\nDo you want to switch it **{'OFF' if dark else 'ON'}**? (y/n)\n\n**Note**: Endgame word will be drawn on a light-gray card",
             colour = discord.Colour(int("8d08d2", 16))
         ))
         reply = await self.bot.wait_for("message", check=lambda msg: msg.content.lower() in ["y", "n"] and msg.author == ctx.author and msg.channel == ctx.channel)
@@ -1043,7 +1145,11 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
         if reply.content.lower() == "y":
             dark = not dark
             cursor.execute("UPDATE guilds SET dark=? WHERE id=?", (dark, ctx.guild.id))
-            await reply.add_reaction("✅")
+            base.commit()
+            await ctx.send(embed=discord.Embed(
+                title = "Dark Mode " + ("enabled" if dark else "disabled"),
+                colour = discord.Colour(int("222222" if dark else "dddddd", 16))
+            ))
         else:
             await reply.add_reaction("🆗")
 
