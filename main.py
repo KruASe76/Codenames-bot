@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import os, sqlite3, json, inspect, asyncio, re, random
+from boto.s3.connection import S3Connection
 import generation as gen
 
 # Setting defaults
@@ -10,10 +11,7 @@ ALPHABET = "ABCDEFGHIJKLMNOPQSTUVWXYZ" # Without letter R
 REACTION_ALPHABET = "🇦🇧🇨🇩🇪🇫🇬🇭🇮🇯🇰🇱🇲🇳🇴🇵🇶🇸🇹🇺🇻🇼🇽🇾🇿" # Without R too
 REACTION_NUMBERS = "1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣"
 
-# Getting the settings and the database
-with open(os.path.join(os.getcwd(), "settings.json"), "r") as settings_file:
-    settings = json.load(settings_file)
-
+# Getting the database
 base = sqlite3.connect(os.path.join(os.getcwd(), "base.db"))
 cursor = base.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS guilds (id int primary key, prefix text, players text, team1 text, team2 text, dark null)")
@@ -1278,8 +1276,17 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
         exit()
 
 
-# Last setting & Starting
+# Last setting
 bot.add_cog(GameCommands(bot))
 bot.add_cog(SettingCommands(bot))
 
-bot.run(settings["token"])
+# Getting the token
+try:
+    with open(os.path.join(os.getcwd(), "settings.json"), "r") as settings_file:
+        settings = json.load(settings_file)
+        TOKEN = settings["token"]
+except FileNotFoundError:
+    TOKEN = S3Connection(os.environ['TOKEN'])
+
+# Starting
+bot.run(TOKEN)
