@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
-import os, sqlite3, json, inspect, asyncio, re, random
-from boto.s3.connection import S3Connection
+import os, sqlite3, dotenv, inspect, asyncio, re, random
 import generation as gen
 
 # Setting defaults
@@ -1268,8 +1267,6 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
     @commands.command(help="Just a kill")
     @is_chief
     async def kill(self, ctx): # temprorary command
-        with open("settings.json", "w") as settings_file:
-            json.dump(settings, settings_file, indent=4)
         base.commit()
         base.close()
         await ctx.message.add_reaction("✅")
@@ -1280,13 +1277,7 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
 bot.add_cog(GameCommands(bot))
 bot.add_cog(SettingCommands(bot))
 
-# Getting the token
-try:
-    with open(os.path.join(os.getcwd(), "settings.json"), "r") as settings_file:
-        settings = json.load(settings_file)
-        TOKEN = settings["token"]
-except FileNotFoundError:
-    TOKEN = S3Connection(os.environ['TOKEN'])
-
-# Starting
+# Getting the token and starting
+dotenv.load_dotenv()
+TOKEN = os.getenv("TOKEN")
 bot.run(TOKEN)
