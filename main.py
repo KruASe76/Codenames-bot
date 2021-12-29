@@ -287,6 +287,21 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             max_count = max(reactions, key=lambda r: r.count).count
             reactions = filter(lambda r: r.count == max_count, reactions)
             return map(lambda r: r.emoji, reactions)
+        
+        async def pros_and_cons(msg, delay):
+            await msg.add_reaction("👍")
+            await msg.add_reaction("👎")
+            await asyncio.sleep(delay)
+
+            new_msg = await ctx.channel.fetch_message(msg.id) # Have to get the message object again with reactions in it
+            reactions = filter(lambda r: r.emoji in "👍👎", new_msg.reactions)
+            for reaction in reactions:
+                if reaction.emoji == "👍":
+                    upvotes = reaction.count
+                elif reaction.emoji == "👎":
+                    downvotes = reaction.count
+            
+            return upvotes, downvotes
 
         async with ctx.typing(): # Final player list preparation and show
             cursor.execute("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
@@ -548,26 +563,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     move_msg.add_reaction("🆗")
                     break
                 if move == "000":
-                    game_stop_msg = move_msg.reply(embed = discord.Embed(
+                    stop_msg = await move_msg.reply(embed = discord.Embed(
                         title = "Stopping the game",
                         description = "**Do you really want to stop playing?**\n\nAll players have 15 seconds to vote",
                         colour = discord.Colour(int("ff6450"))
                     ))
-                    await game_stop_msg.add_reaction("👍")
-                    await game_stop_msg.add_reaction("👎")
-                    await asyncio.sleep(15)
-
-                    async for msg in ctx.channel.history(): # Have to get the message object again with reactions in it
-                        if msg.author == bot.user:
-                            break
-                    for reaction in msg.reactions:
-                        if reaction.emoji == "👍":
-                            upvotes = reaction.count
-                        elif reaction.emoji == "👎":
-                            downvotes = reaction.count
-                        else:
-                            continue
                     
+                    upvotes, downvotes = await pros_and_cons(stop_msg, 15)
                     if upvotes > downvotes:
                         ctx.send(embed = discord.Embed(
                             title = "GAME STOPPED",
@@ -584,8 +586,10 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                             colour = discord.Colour(int("8d08d2", 16))
                         ))
                         
-                        continue # No need to generate a new field or decrease loop variable
+                        continue # No need to generate a new field or decrease word_count
                 
+                # move processing voting (same as for game stopping)
+
                 opened_words.append(move)
                 available_words.remove(move)
                 gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words)
@@ -762,26 +766,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     move_msg.add_reaction("🆗")
                     break
                 if move == "000":
-                    game_stop_msg = move_msg.reply(embed = discord.Embed(
+                    stop_msg = await move_msg.reply(embed = discord.Embed(
                         title = "Stopping the game",
                         description = "**Do you really want to stop playing?**\n\nAll players have 15 seconds to vote",
                         colour = discord.Colour(int("ff6450"))
                     ))
-                    await game_stop_msg.add_reaction("👍")
-                    await game_stop_msg.add_reaction("👎")
-                    await asyncio.sleep(15)
-
-                    async for msg in ctx.channel.history(): # Have to get the message object again with reactions in it
-                        if msg.author == bot.user:
-                            break
-                    for reaction in msg.reactions:
-                        if reaction.emoji == "👍":
-                            upvotes = reaction.count
-                        elif reaction.emoji == "👎":
-                            downvotes = reaction.count
-                        else:
-                            continue
                     
+                    upvotes, downvotes = await pros_and_cons(stop_msg, 15)
                     if upvotes > downvotes:
                         ctx.send(embed = discord.Embed(
                             title = "GAME STOPPED",
@@ -798,8 +789,10 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                             colour = discord.Colour(int("8d08d2", 16))
                         ))
                         
-                        continue # No need to generate a new field or decrease loop variable
+                        continue # No need to generate a new field or decrease word_count
                 
+                # move processing voting
+
                 opened_words.append(move)
                 available_words.remove(move)
                 gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words)
