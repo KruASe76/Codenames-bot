@@ -154,7 +154,7 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
                     50*(x+1) + 708*x + 708/2,
                     50*(y+1) + 292*y + 292/2
                 ),
-                text = str(word),
+                text = str(word).upper(),
                 fill = font_col,
                 font = font,
                 anchor = 'mm'
@@ -203,7 +203,7 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
                     50*(x+1) + 708*x + 708/2,
                     50*(y+1) + 292*y + 292/2
                 ),
-                text = str(word),
+                text = str(word).upper(),
                 fill = font_col,
                 font = font,
                 anchor = 'mm'
@@ -214,7 +214,7 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
 
 def words(lang, dict_name):
     dictionary = open(os.path.join(os.getcwd(), 'dictionaries', lang, f'{dict_name}.txt'), 'r', encoding='utf-8')
-    all_words = dictionary.read().upper().split('\n')
+    all_words = dictionary.read().lower().split('\n')
     words = multiple_choice(all_words, 25)
 
     words1 = words.copy()
@@ -228,4 +228,5 @@ def words(lang, dict_name):
         team2_words, words1 = multiple_choice(words1, 9, True)
         team1_words, other_words = multiple_choice(words1, 8, True)
     
-    return team1_words, team2_words, endgame_word, other_words
+    print(tuple(team1_words), tuple(team2_words), endgame_word, tuple(other_words))
+    return tuple(team1_words), tuple(team2_words), endgame_word, tuple(other_words)

@@ -1,11 +1,5 @@
-import generation as gen
+import random
 
-uhd = gen.UltraHD()
-col = gen.Colors(False)
+a, b, c, d = (), (), "", ()
 
-team1_words, team2_words, endgame_word, other_words, opened_words = gen.words('ru', 'deep')
-
-gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words)
-
-available_words = list(set(team1_words + team2_words + [endgame_word] + other_words) - set(opened_words))
-print(available_words)
+list(a + b + (c,) + d)
