@@ -17,8 +17,6 @@ cursor.execute("CREATE TABLE IF NOT EXISTS guilds (id int primary key, prefix te
 cursor.execute("CREATE TABLE IF NOT EXISTS players (id int primary key, games int, games_cap int, wins int, wins_cap int)")
 base.commit()
 
-# cursor.execute("INSERT INTO guilds VALUES (?,?,?,?,?,?)", (795556636748021770, "", "", "", "", False))
-
 # Creating bot
 def get_prefix(bot, message):
     if message.guild:
@@ -33,7 +31,6 @@ def get_prefix(bot, message):
 bot = commands.Bot(command_prefix=get_prefix, help_command=None, strip_after_prefix=True)
 
 # Checks
-is_chief = commands.check(lambda ctx: ctx.message.author.id == 689766059712315414)
 is_moderator = commands.check(lambda ctx: ctx.message.author.permissions_in(ctx.channel).manage_messages)
 
 # Some useful functions
@@ -1091,136 +1088,6 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         await ctx.message.delete(delay=3)
 
 
-    @commands.command()
-    async def demo_start(self, ctx):
-        cursor.execute("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
-        players, team1, team2 = map(lambda var: map(int, var.split()), cursor.fetchone())
-        players = [await self.bot.fetch_user(id) for id in players]
-        team1 = [await self.bot.fetch_user(id) for id in team1]
-        team2 = [await self.bot.fetch_user(id) for id in team2]
-
-        selecting_dict = {
-            "en": {
-                "std": "Original English dictionary (400 words)",
-                "duet": "Original Duet dictionary (400 words)",
-                "deep": "Original Deep Undercover dictionary (18+, 390 words)",
-                "denull": "deNULL's dictionary (763 words)",
-                "denull18": "deNULL's dictionary (18+, 1081 words)",
-                "all": "All English dictionaries (18+, 1139 words)",
-                "esp": "Esperanto"
-            },
-            "ru": {
-                "std": "Стандартный словарь из локализации GaGa Games (400 слов)",
-                "deep": "Словарь версии Deep Undercover, GaGa Games (18+, 390 слов)",
-                "pard": "Словарь от Pard (302 слова)",
-                "vpupkin": "Словарь от vpupkin (396 слов, много топонимов)",
-                "zav": "Словарь от Ивана Заворина (2272 частых слов)",
-                "denull": "Словарь от deNULL (636 слов, немного топонимса)",
-                "denull18": "Словарь от deNULL (18+, 1014 слов)",
-                "all": "Все словари вместе (1058 слов)",
-                "esp": "Esperanto"
-            }
-        }
-
-        await ctx.send(embed = discord.Embed(
-            title = "Select language",
-            description = "**en** - English\n**ru** - Russian\n\nType answer in the following message",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-        language = await self.bot.wait_for("message", check=lambda msg: msg.content.lower().startswith(tuple(selecting_dict.keys())) and msg.channel == ctx.channel)
-        language = language.content.lower()
-
-        dict_choose_list = [f"**{key}** - {val}" for key, val in selecting_dict[language].items()]
-        await ctx.send(embed = discord.Embed(
-            title = "Select dictionary",
-            description = "\n".join(dict_choose_list),
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-        dictionary = await self.bot.wait_for("message", check=lambda msg: msg.content.lower().startswith(tuple(selecting_dict[language].keys())) and msg.channel == ctx.channel)
-
-        await ctx.send(embed = discord.Embed(
-            title = "GAME STARTED!",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-
-        await ctx.send(embed = discord.Embed(
-            description = "Team 1 - **RED** blocks\nTeam 2 - **BLUE** blocks",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-        await ctx.send(file = discord.File(open("images\\pl1.png", "rb"))) #players pic
-        await ctx.send(embed = discord.Embed(
-            title = "Move turn",
-            description = "Captain of **Team 1 (Red)**",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-
-        me = await self.bot.fetch_user(689766059712315414)
-
-        await me.send(embed = discord.Embed(
-            title = "You are the captain of **Team 1 (Red)**",
-            description = "You have been muted in the game voice channel",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-        await me.send(embed = discord.Embed(
-            title = "This is your move turn",
-            description = "In the following message type the word and the number like **`корова 3`**",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-        await me.send(file = discord.File(open("images\\cap1.png", "rb"))) #cap pic
-
-        cap_move = await self.bot.wait_for("message", check=lambda msg: msg.author == me) # работа 2
-        cap_move = cap_move.content.lower()
-
-        await ctx.send(embed = discord.Embed(
-            title = "**Team1 (Red)** captain have moved",
-            description = f"Move contains a word and a number:\n**`{cap_move}`**\n\nThis is other players of **Team 1 (Red)** to move. Please enter words that you want to open. You can enter no more than {int(cap_move[-1]) + 1} words. To finish move, enter **`-`**.",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-
-        pl_move1 = await self.bot.wait_for("message", check=lambda msg: msg.channel == ctx.channel) # прибор
-        pl_move1 = pl_move1.content.lower()
-
-        await ctx.send(embed = discord.Embed(
-            title = "Success",
-            descroption = "You have guessed!",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-        await ctx.send(file = discord.File(open("images\\pl2.png", "rb"))) #pl pic 2
-
-        await me.send(embed = discord.Embed(
-            title = "Success",
-            description = f"Your teammate have guessed the word **`{pl_move1}`**!",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-
-        pl_move2 = await self.bot.wait_for("message", check=lambda msg: msg.channel == ctx.channel) # проводник
-        pl_move2 = pl_move2.content.lower()
-
-        await ctx.send(embed = discord.Embed(
-            title = "Miss",
-            description = "Unfortunately, this word belongs to the other team. Move of your team is finished.",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-        await ctx.send(file = discord.File(open("images\\pl3.png", "rb"))) #pl pic 3
-
-        await me.send(embed = discord.Embed(
-            title = "Miss",
-            description = f"Your teammate have entered the word **`{pl_move2}`** that belongs to the other team",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-
-        await ctx.send(embed = discord.Embed(
-            title = "Move turn",
-            description = "Captain of **Team 2 (Blue)**",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-
-
-    @commands.command()
-    async def test(self, ctx):
-        await ctx.send(await self.bot.application_info())
-
-
 class SettingCommands(commands.Cog, name = "Setting Commands"):
     """Changes the bot's defaults"""
     def __init__(self, bot: commands.Bot):
@@ -1238,39 +1105,6 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
             description = (f"New prefix for this server:\n**`{prefix}`**\n" if prefix else "Custom prefix for this server deleted") + "\nDefault one **`cdn `** and bot ping are still valid",
             colour = discord.Colour(int("8d08d2", 16))
         ))
-    
-
-    @commands.command(help="[In dev] Sets field image dark mode")
-    async def dark(self, ctx):
-        cursor.execute("SELECT dark FROM guilds WHERE id=?", [(ctx.guild.id)])
-        dark = cursor.fetchone()[0]
-
-        await ctx.send(embed = discord.Embed(
-            title = "Dark mode",
-            description = f"Field dark mode is now **{'ON' if dark else 'OFF'}**.\nDo you want to switch it **{'OFF' if dark else 'ON'}**? (y/n)\n\n**Note**: Endgame word will be drawn on a light-gray card",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-        reply = await self.bot.wait_for("message", check=lambda msg: msg.content.lower() in ["y", "n"] and msg.author == ctx.author and msg.channel == ctx.channel)
-
-        if reply.content.lower() == "y":
-            dark = not dark
-            cursor.execute("UPDATE guilds SET dark=? WHERE id=?", (dark, ctx.guild.id))
-            base.commit()
-            await ctx.send(embed=discord.Embed(
-                title = "Dark Mode " + ("enabled" if dark else "disabled"),
-                colour = discord.Colour(int("222222" if dark else "dddddd", 16))
-            ))
-        else:
-            await reply.add_reaction("🆗")
-
-
-    @commands.command(help="Just a kill")
-    @is_chief
-    async def kill(self, ctx): # temprorary command
-        base.commit()
-        base.close()
-        await ctx.message.add_reaction("✅")
-        exit()
 
 
 # Last setting
