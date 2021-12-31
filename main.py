@@ -1310,7 +1310,7 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
 
     @commands.command(help="[In dev] Sets field image dark mode")
     async def dark(self, ctx):
-        cursor.execute("SELECT dark FROM guilds WHERE id=?", [(ctx.guild.id)])
+        cursor.execute("SELECT dark FROM guilds WHERE id=?", (ctx.guild.id,))
         dark = cursor.fetchone()[0]
 
         await ctx.send(embed = discord.Embed(
@@ -1318,7 +1318,7 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
             description = f"Field dark mode is now **{'ON' if dark else 'OFF'}**.\nDo you want to switch it **{'OFF' if dark else 'ON'}**? (y/n)\n\n**Note**: Endgame word will be drawn on a light-gray card",
             colour = discord.Colour(int("8d08d2", 16))
         ))
-        reply = await self.bot.wait_for("message", check=lambda msg: msg.content.lower() in ["y", "n"] and msg.author == ctx.author and msg.channel == ctx.channel)
+        reply = await self.bot.wait_for("message", check=lambda msg: msg.content.lower() in ("y", "n") and msg.author == ctx.author and msg.channel == ctx.channel)
 
         if reply.content.lower() == "y":
             dark = not dark
