@@ -20,11 +20,11 @@ base.commit()
 # Creating bot
 def get_prefix(bot, message):
     if message.guild:
-        cursor.execute("SELECT prefix FROM guilds WHERE id=?", [(message.guild.id)])
+        cursor.execute("SELECT prefix FROM guilds WHERE id=?", (message.guild.id,))
         prefix = cursor.fetchone()[0]
-        res = (prefix, "cdn ") if prefix else ("cdn ",)
+        res = (prefix, "cdn") if prefix else ("cdn",)
     else:
-        res = ("cdn ", "!", "-")
+        res = ("cdn", "!",  "/", "-")
     
     return commands.when_mentioned_or(*res)(bot, message)
 
@@ -158,7 +158,7 @@ async def help(ctx, command=None):
 # Cogs
 class GameCommands(commands.Cog, name = "Game Commands"):
     """They are used to play (wow, so unpredictable)"""
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot:commands.Bot):
         self.bot = bot
     
     @commands.command(aliases=("register", "reg", "r"), brief="Registers the user for the game",
@@ -205,12 +205,14 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         else:
             await ctx.reply(embed = discord.Embed(
                 title = "Invalid team number",
-                description = "There are only 2 teams in the game.\nSelect one of them or don't type the number to shuffle randomly",
+                description = "There are only 2 teams in the game.\nSelect one of them or don't type the number to select randomly",
                 colour = discord.Colour(int("8d08d2", 16))
             ))
+            return
         cursor.execute("SELECT id FROM players")
-        if ctx.author.id not in [tup[0] for tup in cursor.fetchall()]:
+        if ctx.author.id not in map(lambda row: row[0], cursor.fetchall()):
             cursor.execute("INSERT INTO players VALUES (?,?,?,?,?)", (ctx.author.id, 0, 0, 0, 0))
+            base.commit()
 
         await ctx.message.add_reaction("✅")
         
@@ -337,12 +339,12 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             await final_show.__call__(ctx, final=True)
         await asyncio.sleep(1)
 
-
+        # Dictionary selecting
         selecting_dict = {
             "en": {
                 "std":      "**Original** English dictionary (400 words)",
                 "duet":     "**Original Duet** dictionary (400 words)",
-                "deep":     "**Original Deep Undercover** dictionary (18+, 390 words)",
+                "deep":     "**Original Deep Undercover** dictionary (**18+**, 390 words)",
                 "denull":   "**deNULL's** dictionary (763 words)",
                 "denull18": "**deNULL's** dictionary (**18+**, 1081 words)",
                 "all":      "**All** English dictionaries (18+, 1139 words)",
@@ -350,7 +352,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             },
             "ru": {
                 "std":      "**Стандартный** словарь из локализации GaGa Games (400 слов)",
-                "deep":     "Словарь версии **Deep Undercover**, GaGa Games (18+, 390 слов)",
+                "deep":     "Словарь версии **Deep Undercover**, GaGa Games (**18+**, 390 слов)",
                 "pard":     "Словарь от **Pard** (302 слова)",
                 "vpupkin":  "Словарь от **vpupkin** (396 слов, много топонимов)",
                 "zav":      "Словарь от **Ивана Заворина** (2272 частых слов)",
@@ -390,7 +392,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             colour = discord.Colour(int("8d08d2", 16))
         ))
 
-
+        # Captains selecting
         cap_selecting_list = map(lambda ind, player: f"**{ALPHABET[ind]}** - {player.mention}", range(len(team1)), team1)
         cap_msg = await ctx.send(embed = discord.Embed(
             title = "RED team: Captain selecting",
@@ -429,7 +431,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         await msg.add_reaction("🇷")
         for ind, _ in enumerate(team2):
             await msg.add_reaction(REACTION_ALPHABET[ind])
-        await asyncio.sleep(155)
+        await asyncio.sleep(15)
 
         new_cap_msg = await ctx.channel.fetch_message(cap_msg.id) # Have to get the message object again with reactions in it
         emojis = get_most_count_reaction_emojis(new_cap_msg)
@@ -518,18 +520,22 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         game = True
         while game: # Mainloop
             gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order)
-            cap_field = discord.File(open(os.path.join("images", "cap_field.png"), "rb"))
-            pl_field = discord.File(open(os.path.join("images", "pl_field.png"), "rb"))
             
-            await ctx.send(file = pl_field)
+            with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                await ctx.send(file = pl_field)
+            with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                await first_cap.send(file = cap_field)
+            with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                await second_cap.send(file = cap_field)
+            
             await ctx.send(embed = discord.Embed(
                 title = "Waiting for move",
                 description = f"Captain of **{first_color}** team",
                 colour = discord.Colour(int("ff6450" if first_color=="RED" else "50bbff", 16))
             ))
-
-            await first_cap.send(file = cap_field)
-            await second_cap.send(file = cap_field)
             await first_cap.send(embed = discord.Embed(
                 title = "This is your move turn",
                 description = f"Type a word and a number like {'**`cow 3`**' if language=='en' else '**`корова 3`**'} in the following message",
@@ -587,9 +593,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                 
                 opened_words.append(move)
                 available_words.remove(move)
-                gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order)
-                cap_field = discord.File(open(os.path.join("images", "cap_field.png"), "rb"))
-                pl_field = discord.File(open(os.path.join("images", "pl_field.png"), "rb"))
+                gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order)\
 
                 if move in other_words:
                     await move_msg.reply(embed = discord.Embed(
@@ -623,9 +627,71 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         description = f"The opponent team opened the word **`{move}`** that **belongs to your team**",
                         colour = discord.Colour(int("ff6450" if second_color=="RED" else "50bbff", 16))
                     ))
-                    await ctx.send(file = pl_field)
-                    await first_cap.send(file = cap_field)
-                    await second_cap.send(file = cap_field)
+
+                    if set(second_words) <= set(opened_words): # If all second_words are opened
+                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                            pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                            await ctx.send(file = pl_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await first_cap.send(file = cap_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await second_cap.send(file = cap_field)
+                        
+                        await ctx.send(embed = discord.Embed(
+                            title = "Game over!",
+                            description = f"**{second_color} team won!**\nThey opened all their team words",
+                            colour = discord.Colour(int("ff6450" if second_color=="RED" else "50bbff", 16))
+                        ))
+
+                        await first_cap.send(embed = discord.Embed(
+                            title = "Your team lost!",
+                            description = "Better luck in the next game!",
+                            colour = discord.Colour(int("ff6450" if second_color=="RED" else "50bbff", 16))
+                        ))
+                        cursor.execute("SELECT games, games_cap FROM players WHERE id=?", (first_cap.id,))
+                        cursor.execute(
+                            "UPDATE players SET games=?, games_cap=? WHERE id=?",
+                            (*map(lambda stat: stat+1, cursor.fetchone()), first_cap.id)
+                        )
+                        for player in first_pl:
+                            await player.send(embed = discord.Embed(
+                                title = "Your team lost!",
+                                description = "Better luck in the next game!",
+                                colour = discord.Colour(int("ff6450" if second_color=="RED" else "50bbff", 16))
+                            ))
+                            cursor.execute("SELECT games FROM players WHERE id=?", (player.id,))
+                            cursor.execute(
+                                "UPDATE players SET games=? WHERE id=?",
+                                (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
+                            )
+                        
+                        await second_cap.send(embed = discord.Embed(
+                            title = "Your team won!",
+                            description = "Keep it up!",
+                            colour = discord.Colour(int("ff6450" if second_color=="RED" else "50bbff", 16))
+                        ))
+                        cursor.execute("SELECT games, games_cap, wins, wins_cap FROM players WHERE id=?", (second_cap.id,))
+                        cursor.execute(
+                            "UPDATE players SET games=?, games_cap=?, wins=?, wins_cap=? WHERE id=?",
+                            (*map(lambda stat: stat+1, cursor.fetchone()), second_cap.id)
+                        )
+                        for player in second_pl:
+                            await player.send(embed = discord.Embed(
+                                title = "Your team won!",
+                                description = "Keep it up!",
+                                colour = discord.Colour(int("ff6450" if second_color=="RED" else "50bbff", 16))
+                            ))
+                            cursor.execute("SELECT games, wins FROM players WHERE id=?", (player.id,))
+                            cursor.execute(
+                                "UPDATE players SET games=?, wins=? WHERE id=?",
+                                (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
+                            )
+
+                        game = False
+                        break
+                    
                     break
                 elif move == endgame_word:
                     await move_msg.reply(embed = discord.Embed(
@@ -644,9 +710,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         colour = discord.Colour(int("222222", 16))
                     ))
 
-                    await ctx.send(file = pl_field)
-                    await first_cap.send(file = cap_field)
-                    await second_cap.send(file = cap_field)
+                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                        await ctx.send(file = pl_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await first_cap.send(file = cap_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await second_cap.send(file = cap_field)
+                    
                     await ctx.send(embed = discord.Embed(
                         title = "Game over!",
                         description = f"**{second_color} team won!**\n{first_color} team opened an endgame word",
@@ -661,7 +734,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     cursor.execute("SELECT games, games_cap FROM players WHERE id=?", (first_cap.id,))
                     cursor.execute(
                         "UPDATE players SET games=?, games_cap=? WHERE id=?",
-                        (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, first_cap.id)
+                        (*map(lambda stat: stat+1, cursor.fetchone()), first_cap.id)
                     )
                     for player in first_pl:
                         await player.send(embed = discord.Embed(
@@ -670,7 +743,10 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                             colour = discord.Colour(int("ff6450" if second_color=="RED" else "50bbff", 16))
                         ))
                         cursor.execute("SELECT games FROM players WHERE id=?", (player.id,))
-                        cursor.execute("UPDATE players SET games=? WHERE id=?", (cursor.fetchone()[0]+1, player.id))
+                        cursor.execute(
+                            "UPDATE players SET games=? WHERE id=?",
+                            (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
+                        )
                     
                     await second_cap.send(embed = discord.Embed(
                         title = "Your team won!",
@@ -680,7 +756,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     cursor.execute("SELECT games, games_cap, wins, wins_cap FROM players WHERE id=?", (second_cap.id,))
                     cursor.execute(
                         "UPDATE players SET games=?, games_cap=?, wins=?, wins_cap=? WHERE id=?",
-                        (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, cursor.fetchone()[2]+1, cursor.fetchone()[3]+1, second_cap.id)
+                        (*map(lambda stat: stat+1, cursor.fetchone()), second_cap.id)
                     )
                     for player in second_pl:
                         await player.send(embed = discord.Embed(
@@ -691,7 +767,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         cursor.execute("SELECT games, wins FROM players WHERE id=?", (player.id,))
                         cursor.execute(
                             "UPDATE players SET games=?, wins=? WHERE id=?",
-                            (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, player.id)
+                            (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
                         )
 
                     game = False
@@ -714,9 +790,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     ))
 
                     if set(first_words) <= set(opened_words): # If all first_words are opened
-                        await ctx.send(file = pl_field)
-                        await first_cap.send(file = cap_field)
-                        await second_cap.send(file = cap_field)
+                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                            pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                            await ctx.send(file = pl_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await first_cap.send(file = cap_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await second_cap.send(file = cap_field)
+                        
                         await ctx.send(embed = discord.Embed(
                             title = "Game over!",
                             description = f"**{first_color} team won!**\nThey opened all their team words",
@@ -731,7 +814,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         cursor.execute("SELECT games, games_cap, wins, wins_cap FROM players WHERE id=?", (first_cap.id,))
                         cursor.execute(
                             "UPDATE players SET games=?, games_cap=?, wins=?, wins_cap=? WHERE id=?",
-                            (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, cursor.fetchone()[2]+1, cursor.fetchone()[3]+1, first_cap.id)
+                            (*map(lambda stat: stat+1, cursor.fetchone()), first_cap.id)
                         )
                         for player in first_pl:
                             await player.send(embed = discord.Embed(
@@ -742,7 +825,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                             cursor.execute("SELECT games, wins FROM players WHERE id=?", (player.id,))
                             cursor.execute(
                                 "UPDATE players SET games=?, wins=? WHERE id=?",
-                                (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, player.id)
+                                (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
                             )
                         
                         await second_cap.send(embed = discord.Embed(
@@ -753,7 +836,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         cursor.execute("SELECT games, games_cap FROM players WHERE id=?", (second_cap.id,))
                         cursor.execute(
                             "UPDATE players SET games=?, games_cap=? WHERE id=?",
-                            (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, second_cap.id)
+                            (*map(lambda stat: stat+1, cursor.fetchone()), second_cap.id)
                         )
                         for player in second_pl:
                             await player.send(embed = discord.Embed(
@@ -762,14 +845,23 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                                 colour = discord.Colour(int("ff6450" if first_color=="RED" else "50bbff", 16))
                             ))
                             cursor.execute("SELECT games FROM players WHERE id=?", (player.id,))
-                            cursor.execute("UPDATE players SET games=? WHERE id=?", (cursor.fetchone()[0]+1, player.id))
+                            cursor.execute(
+                                "UPDATE players SET games=? WHERE id=?",
+                                (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
+                            )
 
                         game = False
                         break
                 
-                await ctx.send(file = pl_field)
-                await first_cap.send(file = cap_field)
-                await second_cap.send(file = cap_field)
+                with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                    pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                    await ctx.send(file = pl_field)
+                with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                    await first_cap.send(file = cap_field)
+                with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                    await second_cap.send(file = cap_field)
 
                 word_count -= 1
             
@@ -777,18 +869,22 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                 break
             
             gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order)
-            cap_field = discord.File(open(os.path.join("images", "cap_field.png"), "rb"))
-            pl_field = discord.File(open(os.path.join("images", "pl_field.png"), "rb"))
             
-            await ctx.send(file = pl_field)
+            with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                await ctx.send(file = pl_field)
+            with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                await first_cap.send(file = cap_field)
+            with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                await second_cap.send(file = cap_field)
+            
             await ctx.send(embed = discord.Embed(
                 title = "Waiting for move",
                 description = f"Captain of **{second_color}** team",
                 colour = discord.Colour(int("ff6450" if second_color=="RED" else "50bbff", 16))
             ))
-
-            await first_cap.send(file = cap_field)
-            await second_cap.send(file = cap_field)
             await second_cap.send(embed = discord.Embed(
                 title = "This is your move turn",
                 description = f"Type a word and a number like {'**`cow 3`**' if language=='en' else '**`корова 3`**'} in the following message",
@@ -847,8 +943,6 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                 opened_words.append(move)
                 available_words.remove(move)
                 gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order)
-                cap_field = discord.File(open(os.path.join("images", "cap_field.png"), "rb"))
-                pl_field = discord.File(open(os.path.join("images", "pl_field.png"), "rb"))
 
                 if move in other_words:
                     await move_msg.reply(embed = discord.Embed(
@@ -882,9 +976,71 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         description = f"The opponent team opened the word **`{move}`** that **belongs to your team**",
                         colour = discord.Colour(int("ff6450" if first_color=="RED" else "50bbff", 16))
                     ))
-                    await ctx.send(file = pl_field)
-                    await first_cap.send(file = cap_field)
-                    await second_cap.send(file = cap_field)
+
+                    if set(first_words) <= set(opened_words): # If all first_words are opened
+                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                            pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                            await ctx.send(file = pl_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await first_cap.send(file = cap_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await second_cap.send(file = cap_field)
+                        
+                        await ctx.send(embed = discord.Embed(
+                            title = "Game over!",
+                            description = f"**{first_color} team won!**\nThey opened all their team words",
+                            colour = discord.Colour(int("ff6450" if first_color=="RED" else "50bbff", 16))
+                        ))
+                        
+                        await first_cap.send(embed = discord.Embed(
+                            title = "Your team won!",
+                            description = "Keep it up!",
+                            colour = discord.Colour(int("ff6450" if first_color=="RED" else "50bbff", 16))
+                        ))
+                        cursor.execute("SELECT games, games_cap, wins, wins_cap FROM players WHERE id=?", (first_cap.id,))
+                        cursor.execute(
+                            "UPDATE players SET games=?, games_cap=?, wins=?, wins_cap=? WHERE id=?",
+                            (*map(lambda stat: stat+1, cursor.fetchone()), first_cap.id)
+                        )
+                        for player in first_pl:
+                            await player.send(embed = discord.Embed(
+                                title = "Your team won!",
+                                description = "Keep it up!",
+                                colour = discord.Colour(int("ff6450" if first_color=="RED" else "50bbff", 16))
+                            ))
+                            cursor.execute("SELECT games, wins FROM players WHERE id=?", (player.id,))
+                            cursor.execute(
+                                "UPDATE players SET games=?, wins=? WHERE id=?",
+                                (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
+                            )
+                        
+                        await second_cap.send(embed = discord.Embed(
+                            title = "Your team lost!",
+                            description = "Better luck in the next game!",
+                            colour = discord.Colour(int("ff6450" if first_color=="RED" else "50bbff", 16))
+                        ))
+                        cursor.execute("SELECT games, games_cap FROM players WHERE id=?", (second_cap.id,))
+                        cursor.execute(
+                            "UPDATE players SET games=?, games_cap=? WHERE id=?",
+                            (*map(lambda stat: stat+1, cursor.fetchone()), second_cap.id)
+                        )
+                        for player in second_pl:
+                            await player.send(embed = discord.Embed(
+                                title = "Your team lost!",
+                                description = "Better luck in the next game!",
+                                colour = discord.Colour(int("ff6450" if first_color=="RED" else "50bbff", 16))
+                            ))
+                            cursor.execute("SELECT games FROM players WHERE id=?", (player.id,))
+                            cursor.execute(
+                                "UPDATE players SET games=? WHERE id=?",
+                                (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
+                            )
+
+                        game = False
+                        break
+                    
                     break
                 elif move == endgame_word:
                     await move_msg.reply(embed = discord.Embed(
@@ -903,9 +1059,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         colour = discord.Colour(int("222222", 16))
                     ))
 
-                    await ctx.send(file = pl_field)
-                    await first_cap.send(file = cap_field)
-                    await second_cap.send(file = cap_field)
+                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                        await ctx.send(file = pl_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await first_cap.send(file = cap_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await second_cap.send(file = cap_field)
+                    
                     await ctx.send(embed = discord.Embed(
                         title = "Game over!",
                         description = f"**{first_color} team won!**\n{second_color} team opened an endgame word",
@@ -920,7 +1083,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     cursor.execute("SELECT games, games_cap, wins, wins_cap FROM players WHERE id=?", (first_cap.id,))
                     cursor.execute(
                         "UPDATE players SET games=?, games_cap=?, wins=?, wins_cap=? WHERE id=?",
-                        (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, cursor.fetchone()[2]+1, cursor.fetchone()[3]+1, first_cap.id)
+                        (*map(lambda stat: stat+1, cursor.fetchone()), first_cap.id)
                     )
                     for player in first_pl:
                         await player.send(embed = discord.Embed(
@@ -931,7 +1094,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         cursor.execute("SELECT games, wins FROM players WHERE id=?", (player.id,))
                         cursor.execute(
                             "UPDATE players SET games=?, wins=? WHERE id=?",
-                            (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, player.id)
+                            (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
                         )
                     
                     await second_cap.send(embed = discord.Embed(
@@ -942,7 +1105,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     cursor.execute("SELECT games, games_cap FROM players WHERE id=?", (second_cap.id,))
                     cursor.execute(
                         "UPDATE players SET games=?, games_cap=? WHERE id=?",
-                        (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, second_cap.id)
+                        (*map(lambda stat: stat+1, cursor.fetchone()), second_cap.id)
                     )
                     for player in second_pl:
                         await player.send(embed = discord.Embed(
@@ -951,7 +1114,10 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                             colour = discord.Colour(int("ff6450" if first_color=="RED" else "50bbff", 16))
                         ))
                         cursor.execute("SELECT games FROM players WHERE id=?", (player.id,))
-                        cursor.execute("UPDATE players SET games=? WHERE id=?", (cursor.fetchone()[0]+1, player.id))
+                        cursor.execute(
+                            "UPDATE players SET games=? WHERE id=?",
+                            (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
+                        )
 
                     game = False
                     break
@@ -973,9 +1139,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     ))
 
                     if set(second_words) <= set(opened_words): # If all second_words are opened
-                        await ctx.send(file = pl_field)
-                        await first_cap.send(file = cap_field)
-                        await second_cap.send(file = cap_field)
+                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                            pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                            await ctx.send(file = pl_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await first_cap.send(file = cap_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await second_cap.send(file = cap_field)
+                        
                         await ctx.send(embed = discord.Embed(
                             title = "Game over!",
                             description = f"**{second_color} team won!**\nThey opened all their team words",
@@ -990,7 +1163,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         cursor.execute("SELECT games, games_cap FROM players WHERE id=?", (first_cap.id,))
                         cursor.execute(
                             "UPDATE players SET games=?, games_cap=? WHERE id=?",
-                            (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, first_cap.id)
+                            (*map(lambda stat: stat+1, cursor.fetchone()), first_cap.id)
                         )
                         for player in first_pl:
                             await player.send(embed = discord.Embed(
@@ -999,7 +1172,10 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                                 colour = discord.Colour(int("ff6450" if second_color=="RED" else "50bbff", 16))
                             ))
                             cursor.execute("SELECT games FROM players WHERE id=?", (player.id,))
-                            cursor.execute("UPDATE players SET games=? WHERE id=?", (cursor.fetchone()[0]+1, player.id))
+                            cursor.execute(
+                                "UPDATE players SET games=? WHERE id=?",
+                                (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
+                            )
                         
                         await second_cap.send(embed = discord.Embed(
                             title = "Your team won!",
@@ -1009,7 +1185,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         cursor.execute("SELECT games, games_cap, wins, wins_cap FROM players WHERE id=?", (second_cap.id,))
                         cursor.execute(
                             "UPDATE players SET games=?, games_cap=?, wins=?, wins_cap=? WHERE id=?",
-                            (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, cursor.fetchone()[2]+1, cursor.fetchone()[3]+1, second_cap.id)
+                            (*map(lambda stat: stat+1, cursor.fetchone()), second_cap.id)
                         )
                         for player in second_pl:
                             await player.send(embed = discord.Embed(
@@ -1020,15 +1196,21 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                             cursor.execute("SELECT games, wins FROM players WHERE id=?", (player.id,))
                             cursor.execute(
                                 "UPDATE players SET games=?, wins=? WHERE id=?",
-                                (cursor.fetchone()[0]+1, cursor.fetchone()[1]+1, player.id)
+                                (*map(lambda stat: stat+1, cursor.fetchone()), player.id)
                             )
 
                         game = False
                         break
                 
-                await ctx.send(file = pl_field)
-                await first_cap.send(file = cap_field)
-                await second_cap.send(file = cap_field)
+                with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                    pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                    await ctx.send(file = pl_field)
+                with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                    await first_cap.send(file = cap_field)
+                with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                    await second_cap.send(file = cap_field)
 
                 word_count -= 1
 
@@ -1056,9 +1238,9 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         games, games_cap, wins, wins_cap = map(int, info)
         games_tm = games - games_cap # In the team
         wins_tm = wins - wins_cap
-        winrate = f"{(wins / games) * 100}%" if games else "-"
-        winrate_cap = f"{(wins_cap / games_cap) * 100}%" if games_cap else "-"
-        winrate_tm = f"{(wins_tm / games_tm) * 100}%" if games_tm else "-"
+        winrate = f"{round((wins / games) * 100)}%" if games else "-"
+        winrate_cap = f"{round((wins_cap / games_cap) * 100)}%" if games_cap else "-"
+        winrate_tm = f"{round((wins_tm / games_tm) * 100)}%" if games_tm else "-"
 
         stats_embed = discord.Embed(
             title = f"**{member.nick if member.nick else member.name}**'s statistics",
@@ -1090,19 +1272,19 @@ class GameCommands(commands.Cog, name = "Game Commands"):
 
 class SettingCommands(commands.Cog, name = "Setting Commands"):
     """Changes the bot's defaults"""
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot:commands.Bot):
         self.bot = bot
     
-    @commands.command(aliases=("pre",), brief="Changes the bot's prefix. Empty prefix -> default", help='Changes the bot\'s prefix.\nIf you wand to set it to default ("cdn ") do not input a new prefix')
+    @commands.command(aliases=("pre",), brief="Changes the bot's prefix. Empty prefix -> default", help='Changes the bot\'s prefix.\nIf you wand to set it to default ("cdn") do not input a new prefix')
     @is_moderator
-    async def prefix(self, ctx, new_prefix="cdn "):
-        prefix = "" if new_prefix == "cdn " else new_prefix
+    async def prefix(self, ctx, new_prefix="cdn"):
+        prefix = "" if new_prefix == "cdn" else new_prefix
         cursor.execute("UPDATE guilds SET prefix=? WHERE id=?", (prefix, ctx.guild.id))
         base.commit()
 
         await ctx.send(embed=discord.Embed(
             title = "Prefix changed",
-            description = (f"New prefix for this server:\n**`{prefix}`**\n" if prefix else "Custom prefix for this server deleted") + "\nDefault one **`cdn `** and bot ping are still valid",
+            description = (f"New prefix for this server:\n**`{prefix}`**\n" if prefix else "Custom prefix for this server deleted") + "\nDefault one **`cdn`** and bot ping are still valid",
             colour = discord.Colour(int("8d08d2", 16))
         ))
 

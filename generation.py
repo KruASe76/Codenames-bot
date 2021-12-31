@@ -1,6 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 import random, os
 
+# Classes with constants
 class UltraHD():
     def __init__(self):
         self.x = 3840
@@ -11,17 +12,17 @@ class Colors():
         self.red_fill = (255, 100, 80)
         self.red_font = (136, 16, 0)
         self.red_opened_fill = (255, 223, 219)
-        self.red_opened_font = (251, 217, 213)
+        self.red_opened_font = self.red_font
 
         self.blue_fill = (80, 187, 255)
         self.blue_font = (0, 84, 138)
         self.blue_opened_fill = (219, 241, 255)
-        self.blue_opened_font = (207, 235, 252)
+        self.blue_opened_font = self.blue_font
 
         self.black_fill = (68, 68, 68)
         self.black_font = (170, 170, 170)
         self.black_opened_fill = (217, 217, 217)
-        self.black_opened_font = (237, 237, 237)
+        self.black_opened_font = self.black_font
 
         self.white_fill = (250, 250, 250)
         self.white_outline = (220, 220, 220)
@@ -33,7 +34,7 @@ class Colors():
         self.white_opened_pl_outline = self.white_opened_pl_fill
         self.white_opened_pl_font = (216, 207, 173)
 
-
+# Useful function
 def multiple_choice(seq, count, return_seq=False): # non-repeatable
     seq_type = type(seq)
     seq = list(seq)
@@ -47,7 +48,7 @@ def multiple_choice(seq, count, return_seq=False): # non-repeatable
     else:
         return result
 
-
+# Module functions
 def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order):
     img = Image.new('RGB', (uhd.x, uhd.y), (255, 255, 255))
     draw = ImageDraw.Draw(img)
@@ -209,12 +210,13 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
                 anchor = 'mm'
             )
 
+    os.makedirs(os.path.join(os.getcwd(), "images"), exist_ok=True)
     cap_img.save(os.path.join('images', 'cap_field.png'))
     pl_img.save(os.path.join('images', 'pl_field.png'))
 
 def words(lang, dict_name):
     dictionary = open(os.path.join(os.getcwd(), 'dictionaries', lang, f'{dict_name}.txt'), 'r', encoding='utf-8')
-    all_words = dictionary.read().lower().split('\n')
+    all_words = dictionary.read().lower().replace("ё", "е").split('\n')
     words = multiple_choice(all_words, 25)
 
     words1 = words.copy()
@@ -228,5 +230,4 @@ def words(lang, dict_name):
         team2_words, words1 = multiple_choice(words1, 9, True)
         team1_words, other_words = multiple_choice(words1, 8, True)
     
-    print(tuple(team1_words), tuple(team2_words), endgame_word, tuple(other_words))
     return tuple(team1_words), tuple(team2_words), endgame_word, tuple(other_words)
