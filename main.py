@@ -24,7 +24,7 @@ def get_prefix(bot, message):
         prefix = cursor.fetchone()[0]
         res = (prefix, "cdn") if prefix else ("cdn",)
     else:
-        res = ("cdn", "!", "/", "-")
+        res = ("cdn", "!",  "/", "-")
     
     return commands.when_mentioned_or(*res)(bot, message)
 
@@ -1290,7 +1290,7 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
 
     @commands.command(help="[In dev] Sets field image dark mode")
     async def dark(self, ctx):
-        cursor.execute("SELECT dark FROM guilds WHERE id=?", (ctx.guild.id,))
+        cursor.execute("SELECT dark FROM guilds WHERE id=?", [(ctx.guild.id)])
         dark = cursor.fetchone()[0]
 
         await ctx.send(embed = discord.Embed(
