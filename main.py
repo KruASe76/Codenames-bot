@@ -24,7 +24,7 @@ def get_prefix(bot, message):
         prefix = cursor.fetchone()[0]
         res = (prefix, "cdn") if prefix else ("cdn",)
     else:
-        res = ("cdn", "!",  "/", "-")
+        res = ("cdn", "!", "/", "-")
     
     return commands.when_mentioned_or(*res)(bot, message)
 
