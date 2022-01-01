@@ -467,7 +467,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             team1_pl_without.remove(player)
             await player.send(embed = discord.Embed(
                 title = "Game started",
-                description = f"**You're the member of the RED team**\n\nThe captain of your team is {team1_cap.mention}\n\nYour teammates are:\n" + "\n".join([p.mention for p in team1_pl_without]),
+                description = f"**You're a member of the RED team**\n\nThe captain of your team is {team1_cap.mention}\n\nYour teammates are:\n" + "\n".join([p.mention for p in team1_pl_without]),
                 colour = discord.Colour(int("ff6450", 16))
             ))
         
@@ -481,7 +481,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             team2_pl_without.remove(player)
             await player.send(embed = discord.Embed(
                 title = "Game started",
-                description = f"**You're the member of the BLUE team**\n\nThe captain of your team is {team2_cap.mention}\n\nYour teammates are:\n" + "\n".join([p.mention for p in team2_pl_without]),
+                description = f"**You're a member of the BLUE team**\n\nThe captain of your team is {team2_cap.mention}\n\nYour teammates are:\n" + "\n".join([p.mention for p in team2_pl_without]),
                 colour = discord.Colour(int("50bbff", 16))
             ))
 
@@ -569,7 +569,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     stop_msg = await move_msg.reply(embed = discord.Embed(
                         title = "Stopping the game",
                         description = "**Do you really want to stop playing?**\n\nAll players have 15 seconds to vote",
-                        colour = discord.Colour(int("ff6450"))
+                        colour = discord.Colour(int("ff6450", 16))
                     ))
                     
                     upvotes, downvotes = await pros_and_cons(stop_msg, 15)
@@ -611,6 +611,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         description = f"The opponent team opened the word **`{move}`** that **doesn't belong to any team**",
                         colour = discord.Colour(int("dddddd", 16))
                     ))
+
+                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                        await ctx.send(file = pl_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await first_cap.send(file = cap_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await second_cap.send(file = cap_field)
                 elif move in second_words:
                     await move_msg.reply(embed = discord.Embed(
                         title = "Miss",
@@ -852,16 +862,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
 
                         game = False
                         break
-                
-                with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
-                    pl_field = discord.File(pl_field_bin, filename="player_field.png")
-                    await ctx.send(file = pl_field)
-                with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
-                    cap_field = discord.File(cap_field_bin, filename="captain_field.png")
-                    await first_cap.send(file = cap_field)
-                with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
-                    cap_field = discord.File(cap_field_bin, filename="captain_field.png")
-                    await second_cap.send(file = cap_field)
+
+                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                        await ctx.send(file = pl_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await first_cap.send(file = cap_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await second_cap.send(file = cap_field)
 
                 word_count -= 1
             
@@ -918,7 +928,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     stop_msg = await move_msg.reply(embed = discord.Embed(
                         title = "Stopping the game",
                         description = "**Do you really want to stop playing?**\n\nAll players have 15 seconds to vote",
-                        colour = discord.Colour(int("ff6450"))
+                        colour = discord.Colour(int("ff6450", 16))
                     ))
                     
                     upvotes, downvotes = await pros_and_cons(stop_msg, 15)
@@ -960,6 +970,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         description = f"The opponent team opened the word **`{move}`** that **doesn't belong to any team**",
                         colour = discord.Colour(int("dddddd", 16))
                     ))
+
+                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                        await ctx.send(file = pl_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await first_cap.send(file = cap_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await second_cap.send(file = cap_field)
                 elif move in first_words:
                     await move_msg.reply(embed = discord.Embed(
                         title = "Miss",
@@ -1201,16 +1221,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
 
                         game = False
                         break
-                
-                with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
-                    pl_field = discord.File(pl_field_bin, filename="player_field.png")
-                    await ctx.send(file = pl_field)
-                with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
-                    cap_field = discord.File(cap_field_bin, filename="captain_field.png")
-                    await first_cap.send(file = cap_field)
-                with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
-                    cap_field = discord.File(cap_field_bin, filename="captain_field.png")
-                    await second_cap.send(file = cap_field)
+
+                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                        await ctx.send(file = pl_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await first_cap.send(file = cap_field)
+                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                        await second_cap.send(file = cap_field)
 
                 word_count -= 1
 
