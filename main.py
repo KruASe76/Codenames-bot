@@ -28,10 +28,10 @@ def get_prefix(bot, message):
     
     return commands.when_mentioned_or(*res)(bot, message)
 
-bot = commands.Bot(command_prefix=get_prefix, help_command=None, strip_after_prefix=True)
+bot = commands.Bot(command_prefix=get_prefix, help_command=None, strip_after_prefix=True, owner_id=790535470870298642)
 
 # Checks
-is_moderator = commands.check(lambda ctx: ctx.message.author.permissions_in(ctx.channel).manage_messages)
+is_moderator = commands.check(lambda ctx: ctx.message.author.permissions_in(ctx.channel).manage_messages or bot.is_owner(ctx.message.author))
 
 # Some useful functions
 def get_most_count_reaction_emojis(msg):
