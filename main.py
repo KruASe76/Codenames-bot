@@ -485,10 +485,6 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                 colour = discord.Colour(int("50bbff", 16))
             ))
 
-        uhd = gen.UltraHD()
-        cursor.execute("SELECT dark FROM guilds WHERE id=?", (ctx.guild.id,))
-        col = gen.Colors(cursor.fetchone()[0])
-
         team1_words, team2_words, endgame_word, other_words = gen.words(
             lang=language, dict_name=game_dict_name
         )
@@ -519,15 +515,15 @@ class GameCommands(commands.Cog, name = "Game Commands"):
 
         game = True
         while game: # Mainloop
-            gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order)
+            gen.field(team1_words, team2_words, endgame_word, other_words, opened_words, order, ctx.guild.id)
             
-            with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+            with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                 pl_field = discord.File(pl_field_bin, filename="player_field.png")
                 await ctx.send(file = pl_field)
-            with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+            with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                 cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                 await first_cap.send(file = cap_field)
-            with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+            with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                 cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                 await second_cap.send(file = cap_field)
             
@@ -593,7 +589,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                 
                 opened_words.append(move)
                 available_words.remove(move)
-                gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order)\
+                gen.field(team1_words, team2_words, endgame_word, other_words, opened_words, order, ctx.guild.id)\
 
                 if move in other_words:
                     await move_msg.reply(embed = discord.Embed(
@@ -612,13 +608,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         colour = discord.Colour(int("dddddd", 16))
                     ))
 
-                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                    with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                         pl_field = discord.File(pl_field_bin, filename="player_field.png")
                         await ctx.send(file = pl_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                         cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                         await first_cap.send(file = cap_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                         cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                         await second_cap.send(file = cap_field)
                 elif move in second_words:
@@ -639,13 +635,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     ))
 
                     if set(second_words) <= set(opened_words): # If all second_words are opened
-                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                             pl_field = discord.File(pl_field_bin, filename="player_field.png")
                             await ctx.send(file = pl_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await first_cap.send(file = cap_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await second_cap.send(file = cap_field)
                         
@@ -720,13 +716,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         colour = discord.Colour(int("222222", 16))
                     ))
 
-                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                    with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                         pl_field = discord.File(pl_field_bin, filename="player_field.png")
                         await ctx.send(file = pl_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                         cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                         await first_cap.send(file = cap_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                         cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                         await second_cap.send(file = cap_field)
                     
@@ -800,13 +796,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     ))
 
                     if set(first_words) <= set(opened_words): # If all first_words are opened
-                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                             pl_field = discord.File(pl_field_bin, filename="player_field.png")
                             await ctx.send(file = pl_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await first_cap.send(file = cap_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await second_cap.send(file = cap_field)
                         
@@ -864,13 +860,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         break
 
                     if word_count > 0: # If quitting after this move, field will be sent twice in a row
-                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                             pl_field = discord.File(pl_field_bin, filename="player_field.png")
                             await ctx.send(file = pl_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await first_cap.send(file = cap_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await second_cap.send(file = cap_field)
 
@@ -879,15 +875,15 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             if not game: # checking if the game is over after first team move (a crutch for loop check)
                 break
             
-            gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order)
+            gen.field(team1_words, team2_words, endgame_word, other_words, opened_words, order, ctx.guild.id)
             
-            with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+            with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                 pl_field = discord.File(pl_field_bin, filename="player_field.png")
                 await ctx.send(file = pl_field)
-            with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+            with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                 cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                 await first_cap.send(file = cap_field)
-            with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+            with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                 cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                 await second_cap.send(file = cap_field)
             
@@ -953,7 +949,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
 
                 opened_words.append(move)
                 available_words.remove(move)
-                gen.field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_words, order)
+                gen.field(team1_words, team2_words, endgame_word, other_words, opened_words, order, ctx.guild.id)
 
                 if move in other_words:
                     await move_msg.reply(embed = discord.Embed(
@@ -972,13 +968,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         colour = discord.Colour(int("dddddd", 16))
                     ))
 
-                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                    with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                         pl_field = discord.File(pl_field_bin, filename="player_field.png")
                         await ctx.send(file = pl_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                         cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                         await first_cap.send(file = cap_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                         cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                         await second_cap.send(file = cap_field)
                 elif move in first_words:
@@ -999,13 +995,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     ))
 
                     if set(first_words) <= set(opened_words): # If all first_words are opened
-                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                             pl_field = discord.File(pl_field_bin, filename="player_field.png")
                             await ctx.send(file = pl_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await first_cap.send(file = cap_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await second_cap.send(file = cap_field)
                         
@@ -1080,13 +1076,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         colour = discord.Colour(int("222222", 16))
                     ))
 
-                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                    with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                         pl_field = discord.File(pl_field_bin, filename="player_field.png")
                         await ctx.send(file = pl_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                         cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                         await first_cap.send(file = cap_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                    with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                         cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                         await second_cap.send(file = cap_field)
                     
@@ -1160,13 +1156,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                     ))
 
                     if set(second_words) <= set(opened_words): # If all second_words are opened
-                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                             pl_field = discord.File(pl_field_bin, filename="player_field.png")
                             await ctx.send(file = pl_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await first_cap.send(file = cap_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await second_cap.send(file = cap_field)
                         
@@ -1224,13 +1220,13 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         break
 
                     if word_count > 0: # If quitting after this move, field will be sent twice in a row
-                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                        with open(os.path.join("images", f"pl_field-{ctx.guild.id}.png"), "rb") as pl_field_bin:
                             pl_field = discord.File(pl_field_bin, filename="player_field.png")
                             await ctx.send(file = pl_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await first_cap.send(file = cap_field)
-                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                        with open(os.path.join("images", f"cap_field-{ctx.guild.id}.png"), "rb") as cap_field_bin:
                             cap_field = discord.File(cap_field_bin, filename="captain_field.png")
                             await second_cap.send(file = cap_field)
 
@@ -1241,6 +1237,9 @@ class GameCommands(commands.Cog, name = "Game Commands"):
             ("", "", "", ctx.guild.id)
         )
         base.commit()
+        
+        os.remove(os.path.join("images", f"pl_field-{ctx.guild.id}.png"))
+        os.remove(os.path.join("images", f"cap_field-{ctx.guild.id}.png"))
 
 
     @commands.command(aliases=("st", "ss"), help="Shows player's statistics")
@@ -1253,7 +1252,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         if not info:
             await ctx.reply(embed = discord.Embed(
                 title = "Error",
-                description = f"**{member.nick if member.nick else member.name}** has never played Codenames",
+                description = f"**{member.nick if isinstance(ctx.channel, discord.TextChannel) and member.nick else member.name}** has never played Codenames",
                 colour = discord.Colour(int("ff6450", 16))
             ))
             return
@@ -1265,7 +1264,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         winrate_tm = f"{round((wins_tm / games_tm) * 100)}%" if games_tm else "-"
 
         stats_embed = discord.Embed(
-            title = f"**{member.nick if member.nick else member.name}**'s statistics",
+            title = f"**{member.nick if isinstance(ctx.channel, discord.TextChannel) and member.nick else member.name}**'s statistics",
             colour = discord.Colour(int("8d08d2", 16))
         )
         stats_embed.add_field(name="Total", value=f"Games played: {games}\nGames won: {wins}\nWinrate: {winrate}")
