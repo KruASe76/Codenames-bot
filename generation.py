@@ -97,7 +97,7 @@ def field(uhd, col, team1_words, team2_words, endgame_word, other_words, opened_
     pl_img = img.copy()
     pl_draw = ImageDraw.Draw(pl_img)
     
-    # Filling tha captain's field
+    # Filling the captain's field
     for x in range(5):
         for y in range(5):
             word = order[x*5 + y]

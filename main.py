@@ -863,15 +863,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         game = False
                         break
 
-                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
-                        pl_field = discord.File(pl_field_bin, filename="player_field.png")
-                        await ctx.send(file = pl_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
-                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
-                        await first_cap.send(file = cap_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
-                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
-                        await second_cap.send(file = cap_field)
+                    if word_count > 0: # If quitting after this move, field will be sent twice in a row
+                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                            pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                            await ctx.send(file = pl_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await first_cap.send(file = cap_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await second_cap.send(file = cap_field)
 
                 word_count -= 1
             
@@ -1222,15 +1223,16 @@ class GameCommands(commands.Cog, name = "Game Commands"):
                         game = False
                         break
 
-                    with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
-                        pl_field = discord.File(pl_field_bin, filename="player_field.png")
-                        await ctx.send(file = pl_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
-                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
-                        await first_cap.send(file = cap_field)
-                    with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
-                        cap_field = discord.File(cap_field_bin, filename="captain_field.png")
-                        await second_cap.send(file = cap_field)
+                    if word_count > 0: # If quitting after this move, field will be sent twice in a row
+                        with open(os.path.join("images", "pl_field.png"), "rb") as pl_field_bin:
+                            pl_field = discord.File(pl_field_bin, filename="player_field.png")
+                            await ctx.send(file = pl_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await first_cap.send(file = cap_field)
+                        with open(os.path.join("images", "cap_field.png"), "rb") as cap_field_bin:
+                            cap_field = discord.File(cap_field_bin, filename="captain_field.png")
+                            await second_cap.send(file = cap_field)
 
                 word_count -= 1
 
@@ -1251,7 +1253,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         if not info:
             await ctx.reply(embed = discord.Embed(
                 title = "Error",
-                description = f"**{member.nick if member.nick else member.name}** never played Codenames",
+                description = f"**{member.nick if member.nick else member.name}** has never played Codenames",
                 colour = discord.Colour(int("ff6450", 16))
             ))
             return
@@ -1271,7 +1273,7 @@ class GameCommands(commands.Cog, name = "Game Commands"):
         stats_embed.add_field(name="Team", value=f"Games played: {games_tm}\nGames won: {wins_tm}\nWinrate: {winrate_tm}")
         stats_embed.add_field(
             name = chr(int("2063", 16)),
-            value = f"Codenames is a **team play**, so the winrate statistics do **not** exactly show player's skill",
+            value = f"Codenames is a **team game**, so the winrate statistics do **not** exactly show player's skill",
             inline = False
         )
         stats_embed.set_thumbnail(url = member.avatar_url)
