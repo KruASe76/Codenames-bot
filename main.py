@@ -1310,29 +1310,6 @@ class SettingCommands(commands.Cog, name = "Setting Commands"):
             colour = discord.Colour(int("8d08d2", 16))
         ))
 
-    @commands.command(help="[In dev] Sets field image dark mode")
-    async def dark(self, ctx):
-        cursor.execute("SELECT dark FROM guilds WHERE id=?", (ctx.guild.id,))
-        dark = cursor.fetchone()[0]
-
-        await ctx.send(embed = discord.Embed(
-            title = "Dark mode",
-            description = f"Field dark mode is now **{'ON' if dark else 'OFF'}**.\nDo you want to switch it **{'OFF' if dark else 'ON'}**? (y/n)\n\n**Note**: Endgame word will be drawn on a light-gray card",
-            colour = discord.Colour(int("8d08d2", 16))
-        ))
-        reply = await self.bot.wait_for("message", check=lambda msg: msg.content.lower() in ("y", "n") and msg.author == ctx.author and msg.channel == ctx.channel)
-
-        if reply.content.lower() == "y":
-            dark = not dark
-            cursor.execute("UPDATE guilds SET dark=? WHERE id=?", (dark, ctx.guild.id))
-            base.commit()
-            await ctx.send(embed=discord.Embed(
-                title = "Dark Mode " + ("enabled" if dark else "disabled"),
-                colour = discord.Colour(int("222222" if dark else "dddddd", 16))
-            ))
-        else:
-            await reply.add_reaction("🆗")
-
 
 # Last setting
 bot.add_cog(GameCommands(bot))
