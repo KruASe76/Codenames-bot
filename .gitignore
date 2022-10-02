@@ -1,9 +1,13 @@
-**__pycache__
-.vscode
-/env
+__pycache__/
+.vscode/
+.idea/
+/env*/
 *.db-journal
+.DS_Store
 
 /.env
 
 /base.db
-/images
+/images/
+
+test.py

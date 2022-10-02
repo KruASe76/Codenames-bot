@@ -1,57 +1,18 @@
 from PIL import Image, ImageDraw, ImageFont
-import random, os
+import random
+import os
+import math
 
-# Classes with constants
-class UltraHD():
-    x = 3840
-    y = 2160
+from misc.constants import font, big_font, UltraHD, Colors
 
-class Colors():
-    red_fill = (255, 100, 80)
-    red_font = (136, 16, 0)
-    red_opened_fill = (255, 223, 219)
-    red_opened_font = red_font
 
-    blue_fill = (80, 187, 255)
-    blue_font = (0, 84, 138)
-    blue_opened_fill = (219, 241, 255)
-    blue_opened_font = blue_font
-
-    black_fill = (68, 68, 68)
-    black_font = (170, 170, 170)
-    black_opened_fill = (217, 217, 217)
-    black_opened_font = black_font
-
-    white_fill = (250, 250, 250)
-    white_outline = (220, 220, 220)
-    white_font = (68, 68, 68)
-    white_opened_cap_fill = (253, 253, 253)
-    white_opened_cap_outline = (248, 248, 248)
-    white_opened_cap_font = (217, 217, 217)
-    white_opened_pl_fill = (255, 252, 245)
-    white_opened_pl_outline = white_opened_pl_fill
-    white_opened_pl_font = (216, 207, 173)
-
-# Useful function
-def multiple_choice(seq, count, return_seq=False): # non-repeatable
-    seq_type = type(seq)
-    seq = list(seq)
-    result = []
-    for _ in range(count):
-        result.append(random.choice(seq))
-        seq.remove(result[-1])
-
-    if return_seq:
-        return result, seq_type(seq)
-    else:
-        return result
-
-# Module functions
-def field(team1_words, team2_words, endgame_word, other_words, opened_words, order, id):
+def field(
+    team1_words: tuple[str], team2_words: tuple[str], endgame_word: str, other_words: tuple[str],
+    opened_words: tuple[str], order: tuple[str],
+    id: int
+) -> None:
     img = Image.new("RGB", (UltraHD.x, UltraHD.y), (255, 255, 255))
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype(os.path.join("fonts", "RobotoCondensed-Bold.ttf"), 80, encoding="utf-8")
-    big_font = ImageFont.truetype(os.path.join("fonts", "Roboto-Bold.ttf"), 350, encoding="utf-8")
 
     # Drawing two bottom rectangles with left words counter
     draw.rectangle(
@@ -95,7 +56,7 @@ def field(team1_words, team2_words, endgame_word, other_words, opened_words, ord
     pl_img = img.copy()
     pl_draw = ImageDraw.Draw(pl_img)
     
-    # Filling the captain"s field
+    # Filling the captain's field
     for x in range(5):
         for y in range(5):
             word = order[x*5 + y]
@@ -159,7 +120,7 @@ def field(team1_words, team2_words, endgame_word, other_words, opened_words, ord
                 anchor = "mm"
             )
     
-    # Filling the players" field
+    # Filling the players' field
     for x in range(5):
         for y in range(5):
             word = order[x*5 + y]
@@ -209,23 +170,26 @@ def field(team1_words, team2_words, endgame_word, other_words, opened_words, ord
             )
 
     os.makedirs(os.path.join(os.getcwd(), "images"), exist_ok=True)
-    cap_img.save(os.path.join("images", f"cap_field-{id}.png"))
-    pl_img.save(os.path.join("images", f"pl_field-{id}.png"))
+    cap_img.save(os.path.join(os.getcwd(), "images", f"{id}-captain.png"))
+    pl_img.save(os.path.join(os.getcwd(), "images", f"{id}-player.png"))
 
-def words(lang, dict_name):
-    dictionary = open(os.path.join(os.getcwd(), "dictionaries", lang, f"{dict_name}.txt"), "r", encoding="utf-8")
+def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple[str]]:
+    dictionary = open(os.path.join(os.getcwd(), "resources", "dictionaries", lang, f"{dict_name}.txt"), "r", encoding="utf-8")
     all_words = dictionary.read().lower().replace("ё", "е").split("\n")
-    words = multiple_choice(all_words, 25)
+    words = set(random.sample(all_words, 25))
 
-    words1 = words.copy()
-    endgame_word = random.choice(words1)
-    words1.remove(endgame_word)
-    first_team = random.random()
-    if first_team <= 0.5:
-        team1_words, words1 = multiple_choice(words1, 9, True)
-        team2_words, other_words = multiple_choice(words1, 8, True)
+    endgame_word = random.sample(tuple(words), 1)[0]
+    words.remove(endgame_word)
+    first_team = math.floor(random.random() * 2)
+    if first_team:
+        team1_words = random.sample(tuple(words), 9)
+        words.difference_update(team1_words)
+        team2_words = random.sample(tuple(words), 8)
+        other_words = words.difference(team2_words)
     else:
-        team2_words, words1 = multiple_choice(words1, 9, True)
-        team1_words, other_words = multiple_choice(words1, 8, True)
+        team2_words = random.sample(tuple(words), 9)
+        words.difference_update(team2_words)
+        team1_words = random.sample(tuple(words), 8)
+        other_words = words.difference(team1_words)
     
     return tuple(team1_words), tuple(team2_words), endgame_word, tuple(other_words)
