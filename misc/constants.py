@@ -5,17 +5,13 @@ import os
 
 EMPTY = "\u2063"
 
-ADMINS = set((
-    689766059712315414,
-    790535470870298642,
-    783324731364737034
-))
+ADMINS = {689766059712315414, 790535470870298642, 783324731364737034}
 
 LOGO_LINK = "https://codenames.me/favicon/apple-touch-icon-144x144.png"
 
 ALPHABET = "ABCDEFGHIJKLMNOPQSTUVWXYZ"  # Without letter R
 REACTION_ALPHABET = "🇦🇧🇨🇩🇪🇫🇬🇭🇮🇯🇰🇱🇲🇳🇴🇵🇶🇸🇹🇺🇻🇼🇽🇾🇿"  # Without R too
-REACTION_NUMBERS = "1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣"
+REACTION_NUMBERS = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣")
 
 
 font = ImageFont.truetype(os.path.join("resources", "fonts", "RobotoCondensed-Bold.ttf"), 80, encoding="utf-8")
@@ -49,12 +45,24 @@ flags = {
     "en": "🇬🇧",
     "ru": "🇷🇺"
 }
-flags_rev = dict(map(reversed, flags.items()))
+flags_rev = {v: k for k, v in flags.items()}
 
 
-class UltraHD:
-    x = 3840
-    y = 2160
+class FieldSizing:
+    width = 3840
+    height = 2160
+
+    text_anchor = "mm"  # Middle of the rectangle
+
+    footer_height = 400
+
+    card_count = 5
+    card_spacing = 50
+    card_width = (width - (card_spacing * (card_count + 1))) / card_count
+    card_height = (height - footer_height - (card_spacing * (card_count + 1))) / card_count
+    card_radius = 10
+    card_outline_width = 2
+
 
 class Colors:
     purple = Color.from_rgb(141, 8, 210)

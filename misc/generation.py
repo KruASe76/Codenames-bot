@@ -1,65 +1,79 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import random
 import os
 import math
 
-from misc.constants import font, big_font, UltraHD, Colors
+from misc.constants import font, big_font, FieldSizing, Colors
 
 
+# noinspection PyUnboundLocalVariable
 def field(
     team1_words: tuple[str], team2_words: tuple[str], endgame_word: str, other_words: tuple[str],
-    opened_words: tuple[str], order: tuple[str],
-    id: int
+    opened_words: list[str], order: tuple[str],
+    guild_id: int
 ) -> None:
-    img = Image.new("RGB", (UltraHD.x, UltraHD.y), (255, 255, 255))
+    img = Image.new("RGB", (FieldSizing.width, FieldSizing.height), (255, 255, 255))
     draw = ImageDraw.Draw(img)
 
     # Drawing two bottom rectangles with left words counter
     draw.rectangle(
-        xy = (0, UltraHD.y-400, UltraHD.x/2-1, UltraHD.y-1),
-        fill = Colors.red_fill,
+        xy=(
+            0,
+            FieldSizing.height - FieldSizing.footer_height,
+            FieldSizing.width / 2 - 1,
+            FieldSizing.height - 1
+        ),
+        fill=Colors.red_fill,
     )
     red_words_left = 0
     for word in team1_words:
-        if word not in opened_words: red_words_left += 1
+        if word not in opened_words:
+            red_words_left += 1
     draw.text(
-        xy = (
-            UltraHD.x/4,
-            UltraHD.y-200
+        xy=(
+            FieldSizing.width / 4,
+            FieldSizing.height - FieldSizing.footer_height / 2
         ),
-        text = str(red_words_left),
-        fill = Colors.red_font,
-        font = big_font,
-        anchor = "mm"
+        text=str(red_words_left),
+        fill=Colors.red_font,
+        font=big_font,
+        anchor=FieldSizing.text_anchor
     )
+
     draw.rectangle(
-        xy = (UltraHD.x/2, UltraHD.y-400, UltraHD.x-1, UltraHD.y-1),
-        fill = Colors.blue_fill,
+        xy=(
+            FieldSizing.width / 2,
+            FieldSizing.height - FieldSizing.footer_height,
+            FieldSizing.width - 1,
+            FieldSizing.height - 1
+        ),
+        fill=Colors.blue_fill,
     )
     blue_words_left = 0
     for word in team2_words:
-        if word not in opened_words: blue_words_left += 1
+        if word not in opened_words:
+            blue_words_left += 1
     draw.text(
-        xy = (
-            UltraHD.x * (3/4),
-            UltraHD.y-200
+        xy=(
+            FieldSizing.width / 2 + FieldSizing.width / 4,
+            FieldSizing.height - FieldSizing.footer_height / 2
         ),
-        text = str(blue_words_left),
-        fill = Colors.blue_font,
-        font = big_font,
-        anchor = "mm"
+        text=str(blue_words_left),
+        fill=Colors.blue_font,
+        font=big_font,
+        anchor=FieldSizing.text_anchor
     )
 
-    # Creating two seperate images for two fields
+    # Creating two separate images for two fields
     cap_img = img.copy()
     cap_draw = ImageDraw.Draw(cap_img)
     pl_img = img.copy()
     pl_draw = ImageDraw.Draw(pl_img)
-    
+
     # Filling the captain's field
-    for x in range(5):
-        for y in range(5):
-            word = order[x*5 + y]
+    for x in range(FieldSizing.card_count):
+        for y in range(FieldSizing.card_count):
+            word = order[x * FieldSizing.card_count + y]
             if word in team1_words:
                 if word in opened_words:
                     fill_col = Colors.red_opened_fill
@@ -98,32 +112,33 @@ def field(
                     font_col = Colors.white_font
 
             cap_draw.rounded_rectangle(
-                xy = (
-                    50*(x+1) + 708*x,
-                    50*(y+1) + 292*y,
-                    (50+708) * (x+1),
-                    (50+292) * (y+1)
+                xy=(
+                    FieldSizing.card_spacing * (x + 1) + FieldSizing.card_width * x,
+                    FieldSizing.card_spacing * (y + 1) + FieldSizing.card_height * y,
+                    (FieldSizing.card_spacing + FieldSizing.card_width) * (x + 1),
+                    (FieldSizing.card_spacing + FieldSizing.card_height) * (y + 1)
                 ),
-                radius = 10,
-                fill = fill_col,
-                outline = outline_col,
-                width = 2
+                radius=FieldSizing.card_radius,
+                fill=fill_col,
+                outline=outline_col,
+                width=FieldSizing.card_outline_width
             )
+
             cap_draw.text(
-                xy = (
-                    50*(x+1) + 708*x + 708/2,
-                    50*(y+1) + 292*y + 292/2
+                xy=(
+                    FieldSizing.card_spacing * (x + 1) + FieldSizing.card_width * x + FieldSizing.card_width / 2,
+                    FieldSizing.card_spacing * (y + 1) + FieldSizing.card_height * y + FieldSizing.card_height / 2
                 ),
-                text = str(word).upper(),
-                fill = font_col,
-                font = font,
-                anchor = "mm"
+                text=str(word).upper(),
+                fill=font_col,
+                font=font,
+                anchor=FieldSizing.text_anchor
             )
-    
+
     # Filling the players' field
-    for x in range(5):
-        for y in range(5):
-            word = order[x*5 + y]
+    for x in range(FieldSizing.card_count):
+        for y in range(FieldSizing.card_count):
+            word = order[x * FieldSizing.card_count + y]
             if word in opened_words:
                 if word in team1_words:
                     fill_col = Colors.red_fill
@@ -147,39 +162,43 @@ def field(
                 font_col = Colors.white_font
 
             pl_draw.rounded_rectangle(
-                xy = (
-                    50*(x+1) + 708*x,
-                    50*(y+1) + 292*y,
-                    (50+708) * (x+1),
-                    (50+292) * (y+1)
+                xy=(
+                    FieldSizing.card_spacing * (x + 1) + FieldSizing.card_width * x,
+                    FieldSizing.card_spacing * (y + 1) + FieldSizing.card_height * y,
+                    (FieldSizing.card_spacing + FieldSizing.card_width) * (x + 1),
+                    (FieldSizing.card_spacing + FieldSizing.card_height) * (y + 1)
                 ),
-                radius = 10,
-                fill = fill_col,
-                outline = outline_col,
-                width = 2
+                radius=FieldSizing.card_radius,
+                fill=fill_col,
+                outline=outline_col,
+                width=FieldSizing.card_outline_width
             )
+
             pl_draw.text(
-                xy = (
-                    50*(x+1) + 708*x + 708/2,
-                    50*(y+1) + 292*y + 292/2
+                xy=(
+                    FieldSizing.card_spacing * (x + 1) + FieldSizing.card_width * x + FieldSizing.card_width / 2,
+                    FieldSizing.card_spacing * (y + 1) + FieldSizing.card_height * y + FieldSizing.card_height / 2
                 ),
-                text = str(word).upper(),
-                fill = font_col,
-                font = font,
-                anchor = "mm"
+                text=str(word).upper(),
+                fill=font_col,
+                font=font,
+                anchor=FieldSizing.text_anchor
             )
 
     os.makedirs(os.path.join(os.getcwd(), "images"), exist_ok=True)
-    cap_img.save(os.path.join(os.getcwd(), "images", f"{id}-captain.png"))
-    pl_img.save(os.path.join(os.getcwd(), "images", f"{id}-player.png"))
+    cap_img.save(os.path.join(os.getcwd(), "images", f"{guild_id}-captain.png"))
+    pl_img.save(os.path.join(os.getcwd(), "images", f"{guild_id}-player.png"))
 
 def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple[str]]:
-    dictionary = open(os.path.join(os.getcwd(), "resources", "dictionaries", lang, f"{dict_name}.txt"), "r", encoding="utf-8")
-    all_words = dictionary.read().lower().replace("ё", "е").split("\n")
-    words = set(random.sample(all_words, 25))
+    with open(
+        os.path.join(os.getcwd(), "resources", "dictionaries", lang, f"{dict_name}.txt"), "r", encoding="utf-8"
+    ) as dictionary:
+        all_words = dictionary.read().lower().replace("ё", "е").split("\n")
+    words: set[str] = set(random.sample(all_words, 25))
 
     endgame_word = random.sample(tuple(words), 1)[0]
     words.remove(endgame_word)
+
     first_team = math.floor(random.random() * 2)
     if first_team:
         team1_words = random.sample(tuple(words), 9)
@@ -191,5 +210,5 @@ def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple
         words.difference_update(team2_words)
         team1_words = random.sample(tuple(words), 8)
         other_words = words.difference(team1_words)
-    
+
     return tuple(team1_words), tuple(team2_words), endgame_word, tuple(other_words)

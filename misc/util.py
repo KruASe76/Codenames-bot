@@ -1,20 +1,48 @@
-from discord import Message, User, File
+from discord import Message, User, File, Embed, Reaction
 from discord.ext.commands import Command, Context
 import asyncio
 import os
+from typing import Iterable
+
+from misc.constants import Colors
 
 
 def is_check_in_command(command: Command, check: str) -> bool:
     return check in map(lambda check: check.__qualname__.split(".")[0], command.checks)
 
 
-def get_most_count_reaction_emojis(msg: Message) -> tuple[str]:
-    filt_reactions = tuple(filter(lambda r: r.me, msg.reactions))
-    max_count = max(filt_reactions, key=lambda r: r.count).count
-    max_reactions = tuple(filter(lambda r: r.count == max_count, filt_reactions))
+async def send_error(ctx: Context, title: str, description: str):
+    await ctx.reply(
+        embed=Embed(
+            title=title,
+            description=description,
+            color=Colors.red
+        ),
+        delete_after=7
+    )
+    await ctx.message.delete(delay=7)
+
+
+async def count_certain_reacted_users(reaction: Reaction, users: Iterable[User]) -> int:
+    return len(set([user async for user in reaction.users()]) & set(users))
+
+
+# noinspection PyTypeChecker
+async def most_count_reaction_emojis(msg: Message, counted_users: Iterable[User]) -> tuple[str]:
+    counted_users = set(counted_users)
+    filtered_reactions = tuple(filter(lambda r: r.me, msg.reactions))
+    counts = []
+    for r in filtered_reactions:
+        counts.append(len(set([user async for user in r.users()]) & counted_users))
+    max_reactions = tuple(map(
+        lambda pair: pair[1],
+        filter(lambda pair: counts[pair[0]] == max(counts), enumerate(filtered_reactions))
+    ))
     return tuple(map(lambda r: r.emoji, max_reactions))
 
-async def pros_and_cons(msg: Message, delay: float) -> tuple[int, int]:
+
+# noinspection PyUnboundLocalVariable
+async def pros_and_cons(msg: Message, delay: float, counted_users: Iterable[User]) -> tuple[int, int]:
     await msg.add_reaction("👍")
     await msg.add_reaction("👎")
     await asyncio.sleep(delay)
@@ -23,11 +51,11 @@ async def pros_and_cons(msg: Message, delay: float) -> tuple[int, int]:
     reactions = filter(lambda r: r.emoji in "👍👎", new_msg.reactions)
     for reaction in reactions:
         if reaction.emoji == "👍":
-            upvotes = reaction.count
+            pros = await count_certain_reacted_users(reaction, counted_users)
         else:
-            downvotes = reaction.count
+            cons = await count_certain_reacted_users(reaction, counted_users)
     
-    return upvotes, downvotes
+    return pros, cons
 
 
 async def send_fields(ctx: Context, first_cap: User, second_cap: User) -> None:

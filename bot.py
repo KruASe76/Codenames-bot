@@ -1,12 +1,13 @@
 from discord import Intents, Message
 from discord.ext.commands import Bot, when_mentioned_or
 import asyncio
-import dotenv, os
+from dotenv import find_dotenv, get_key
 from typing import Iterable
 
 from misc.database import Database
+from handlers.events import add_events
 from handlers.help import add_help
-from handlers.cogs import add_cogs
+from handlers.commands import add_commands
 from misc.constants import ADMINS
 
 
@@ -18,14 +19,22 @@ def main() -> None:
         if message.guild:
             prefix = (await db.fetch("SELECT prefix FROM guilds WHERE id=?", (message.guild.id,)))[0]
         else:
-            prefix = (await db.fetch("SELECT prefix FROM players WHERE id=?", (message.author.id,)))[0]
+            request = (await db.fetch("SELECT prefix FROM players WHERE id=?", (message.author.id,)))
+            
+            if not request:
+                await db.exec_and_commit(
+                    "INSERT INTO players VALUES (?,strftime('%d/%m/%Y','now'),?,?,?,?,?,?)",
+                    (message.author.id, "", "en", 0, 0, 0, 0)
+                )
+            
+            prefix = request[0] if request else ""
         
         res = (prefix, "cdn") if prefix else ("cdn",)
         
         return when_mentioned_or(*res)(bot, message)
     
-    intents = Intents.default()
-    intents.members = True
+    intents: Intents = Intents.default()
+    # intents.message_content = True
     bot = Bot(
         command_prefix=get_prefix,
         help_command=None,
@@ -34,10 +43,10 @@ def main() -> None:
         owner_ids=ADMINS
     )
 
-    add_cogs(bot, db)
-    add_help(bot)
+    add_events(bot, db)
+    add_commands(bot, db)
+    add_help(bot, db)
 
 
-    dotenv.load_dotenv()
-    TOKEN = os.getenv("TOKEN")
+    TOKEN = get_key(find_dotenv(), "TOKEN")
     bot.run(TOKEN)
