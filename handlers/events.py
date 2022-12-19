@@ -1,4 +1,4 @@
-from discord import Message, Activity, ActivityType
+from discord import Message, Guild, Activity, ActivityType
 from discord.ext.commands import (
     Bot, Context, Command, Cog, CommandNotFound, BadArgument, MemberNotFound, MissingPermissions, NoPrivateMessage
 )
@@ -8,9 +8,9 @@ from misc.util import send_error
 
 
 class EventCog(Cog, name="events"):
-    def __init__(self, bot: Bot, db: Database) -> None:
+    def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.db = db
+        self.db = Database()
 
     @Cog.listener()
     async def on_ready(self) -> None:
@@ -38,11 +38,19 @@ class EventCog(Cog, name="events"):
             return
 
         if isinstance(error, MissingPermissions):
-            await send_error(ctx, loc.errors.title, loc.errors.no_permission)  # ЗАМЕНИТЬ ВЕЗДЕ
+            await send_error(ctx, loc.errors.title, loc.errors.no_permission)
             return
 
         raise error
 
+    @Cog.listener()
+    async def on_guild_join(self, guild: Guild) -> None:
+        await self.db.exec_and_commit("INSERT INTO guilds VALUES (?,?,?,?,?,?)", (guild.id, "", "en", "", "", ""))
 
-def add_events(bot: Bot, db: Database) -> None:
-    bot.add_cog(EventCog(bot, db))
+    @Cog.listener()
+    async def on_guild_remove(self, guild: Guild) -> None:
+        await self.db.exec_and_commit("DELETE FROM guilds WHERE id=?", (guild.id,))
+
+
+async def add_events(bot: Bot) -> None:
+    await bot.add_cog(EventCog(bot))

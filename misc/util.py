@@ -1,17 +1,17 @@
-from discord import Message, User, File, Embed, Reaction
-from discord.ext.commands import Command, Context
 import asyncio
-import os
 from typing import Iterable
 
-from misc.constants import Colors
+from discord import Message, User, File, Embed, Reaction
+from discord.ext.commands import Command, Context
+
+from misc.constants import Paths, Colors
 
 
 def is_check_in_command(command: Command, check: str) -> bool:
     return check in map(lambda check: check.__qualname__.split(".")[0], command.checks)
 
 
-async def send_error(ctx: Context, title: str, description: str):
+async def send_error(ctx: Context, title: str, description: str) -> None:
     await ctx.reply(
         embed=Embed(
             title=title,
@@ -29,14 +29,11 @@ async def count_certain_reacted_users(reaction: Reaction, users: Iterable[User])
 
 # noinspection PyTypeChecker
 async def most_count_reaction_emojis(msg: Message, counted_users: Iterable[User]) -> tuple[str]:
-    counted_users = set(counted_users)
     filtered_reactions = tuple(filter(lambda r: r.me, msg.reactions))
-    counts = []
-    for r in filtered_reactions:
-        counts.append(len(set([user async for user in r.users()]) & counted_users))
+    counts = [await count_certain_reacted_users(r, counted_users) for r in filtered_reactions]
     max_reactions = tuple(map(
-        lambda pair: pair[1],
-        filter(lambda pair: counts[pair[0]] == max(counts), enumerate(filtered_reactions))
+        lambda pair: pair[0],
+        filter(lambda pair: pair[1] == max(counts), zip(filtered_reactions, counts))
     ))
     return tuple(map(lambda r: r.emoji, max_reactions))
 
@@ -59,12 +56,10 @@ async def pros_and_cons(msg: Message, delay: float, counted_users: Iterable[User
 
 
 async def send_fields(ctx: Context, first_cap: User, second_cap: User) -> None:
-    with open(os.path.join("images", f"{ctx.guild.id}-player.png"), "rb") as pl_field_bin:
-        pl_field = File(pl_field_bin, filename="player_field.png")
-        await ctx.send(file=pl_field)
-    with open(os.path.join("images", f"{ctx.guild.id}-captain.png"), "rb") as cap_field_bin:
-        cap_field = File(cap_field_bin, filename="captain_field.png")
-        await first_cap.send(file=cap_field)
-    with open(os.path.join("images", f"{ctx.guild.id}-captain.png"), "rb") as cap_field_bin:
-        cap_field = File(cap_field_bin, filename="captain_field.png")
-        await second_cap.send(file=cap_field)
+    pl_field = File(Paths.pl_img(ctx.guild.id), filename="player_field.png")
+    await ctx.send(file=pl_field)
+
+    cap_field = File(Paths.cap_img(ctx.guild.id), filename="captain_field.png")
+    await first_cap.send(file=cap_field)
+    cap_field = File(Paths.cap_img(ctx.guild.id), filename="captain_field.png")
+    await second_cap.send(file=cap_field)

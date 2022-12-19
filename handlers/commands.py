@@ -1,38 +1,51 @@
-from discord import Message, TextChannel, Member, Embed, File
-from discord.ext.commands import Bot, Context, Cog, command, guild_only
 import asyncio
-import random
 import os
-import shutil
+import random
 import re
-from typing import Optional
+import shutil
+from itertools import chain
 
-from handlers.checks import is_moderator
-from misc.database import Database
-from misc.constants import EMPTY, ALPHABET, REACTION_ALPHABET, REACTION_NUMBERS, dictionaries, flags, flags_rev, Colors
+from discord import Message, Member, Embed, File
+from discord.ext.commands import Bot, Context, Cog, command, guild_only
+
 import misc.generation as gen
+from handlers.checks import is_moderator
 from misc import util
+from misc.constants import (
+    EMPTY, ALPHABET, REACTION_ALPHABET, REACTION_R, REACTION_NUMBERS, dictionaries, flags, flags_rev, Paths, Colors
+)
+from misc.database import Database
 
 
 class GameCog(Cog, name="game"):
-    def __init__(self, bot: Bot, db: Database) -> None:
+    def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.db = db
+        self.db = Database()
 
     @command(aliases=("ready", "reg", "r"))
     @guild_only()
     async def register(self, ctx: Context, team_number: int = 0) -> None:
         loc = await self.db.localization(ctx)
-        
-        players, team1, team2 = map(
-            lambda result: map(int, result.split()),
-            await self.db.fetch("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
-        )
-        players = [await self.bot.fetch_user(id) for id in players]
-        team1 = [await self.bot.fetch_user(id) for id in team1]
-        team2 = [await self.bot.fetch_user(id) for id in team2]
 
-        if ctx.author in players + team1 + team2:
+        if team_number == 34:
+            await ctx.reply(
+                embed=Embed(
+                    title=loc.commands.register.egg_r34_title,
+                    description=loc.commands.register.egg_r34_desc,
+                    color=Colors.red
+                ),
+                delete_after=7
+            )
+            await ctx.message.delete(delay=7)
+            return
+
+        if team_number not in range(3):
+            await util.send_error(ctx, loc.errors.title, loc.errors.invalid_team)
+            return
+        
+        players, team1, team2 = await self.db.fetch_teams(ctx)
+
+        if ctx.author in chain(players, team1, team2):
             if (ctx.author in players and team_number == 0) or \
                     (ctx.author in team1 and team_number == 1) or \
                     (ctx.author in team2 and team_number == 2):
@@ -55,9 +68,6 @@ class GameCog(Cog, name="game"):
             team1.append(ctx.author)
         elif team_number == 2:
             team2.append(ctx.author)
-        else:
-            await util.send_error(ctx, loc.errors.title, loc.errors.invalid_team)
-            return
 
         if ctx.author.id not in map(lambda row: row[0], await self.db.fetch("SELECT id FROM players", fetchall=True)):
             await self.db.exec_and_commit(
@@ -67,13 +77,7 @@ class GameCog(Cog, name="game"):
 
         await ctx.message.add_reaction("✅")
         
-        players_id = map(lambda player: str(player.id), players)
-        team1_id = map(lambda player: str(player.id), team1)
-        team2_id = map(lambda player: str(player.id), team2)
-        await self.db.exec_and_commit(
-            "UPDATE guilds SET players=?, team1=?, team2=? WHERE id=?",
-            (" ".join(players_id), " ".join(team1_id), " ".join(team2_id), ctx.guild.id)
-        )
+        await self.db.save_teams(ctx, players, team1, team2)
 
         await ctx.message.delete(delay=3)
 
@@ -82,15 +86,9 @@ class GameCog(Cog, name="game"):
     async def leave(self, ctx: Context) -> None:
         loc = await self.db.localization(ctx)
         
-        players, team1, team2 = map(
-            lambda result: map(int, result.split()),
-            await self.db.fetch("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
-        )
-        players = [await self.bot.fetch_user(id) for id in players]
-        team1 = [await self.bot.fetch_user(id) for id in team1]
-        team2 = [await self.bot.fetch_user(id) for id in team2]
+        players, team1, team2 = await self.db.fetch_teams(ctx)
         
-        if ctx.author not in players + team1 + team2:
+        if ctx.author not in chain(players, team1, team2):
             await util.send_error(ctx, loc.errors.title, loc.errors.not_registered)
             return
 
@@ -103,13 +101,7 @@ class GameCog(Cog, name="game"):
         
         await ctx.message.add_reaction("✅")
 
-        players_id = map(lambda player: str(player.id), players)
-        team1_id = map(lambda player: str(player.id), team1)
-        team2_id = map(lambda player: str(player.id), team2)
-        await self.db.exec_and_commit(
-            "UPDATE guilds SET players=?, team1=?, team2=? WHERE id=?",
-            (" ".join(players_id), " ".join(team1_id), " ".join(team2_id), ctx.guild.id)
-        )
+        await self.db.save_teams(ctx, players, team1, team2)
 
         await ctx.message.delete(delay=3)
 
@@ -117,10 +109,7 @@ class GameCog(Cog, name="game"):
     @guild_only()
     @is_moderator()
     async def clear(self, ctx: Context) -> None:
-        await self.db.exec_and_commit(
-            "UPDATE guilds SET players=?, team1=?, team2=? WHERE id=?",
-            ("", "", "", ctx.guild.id)
-        )
+        await self.db.save_teams(ctx, [], [], [])
         
         await ctx.message.add_reaction("✅")
         await ctx.message.delete(delay=3)
@@ -131,35 +120,30 @@ class GameCog(Cog, name="game"):
         loc = await self.db.localization(ctx)
         
         async with ctx.typing():
-            players, team1, team2 = map(
-                lambda result: map(int, result.split()),
-                await self.db.fetch("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
-            )
-            players = [await self.bot.fetch_user(id) for id in players]
-            team1 = [await self.bot.fetch_user(id) for id in team1]
-            team2 = [await self.bot.fetch_user(id) for id in team2]
-
-            players_embed = Embed(
-                title=loc.commands.players.final_player_list if final else loc.commands.players.player_list,
-                color=Colors.purple
-            )
-            if team1:
-                players_embed.add_field(
-                    name=loc.commands.players.team1,
-                    value="\n".join(map(lambda p: p.mention, team1))
-                )
-            if players:
-                players_embed.add_field(
-                    name=loc.commands.players.no_team,
-                    value="\n".join(map(lambda p: p.mention, players))
-                )
-            if team2:
-                players_embed.add_field(
-                    name=loc.commands.players.team2,
-                    value="\n".join(map(lambda p: p.mention, team2))
-                )
+            players, team1, team2 = await self.db.fetch_teams(ctx)
 
             if players or team1 or team2:
+                players_embed = Embed(
+                    title=loc.commands.players.final_player_list if final else loc.commands.players.player_list,
+                    color=Colors.purple
+                )
+
+                if team1:
+                    players_embed.add_field(
+                        name=loc.commands.players.team1,
+                        value="\n".join(map(lambda p: p.mention, team1))
+                    )
+                if players:
+                    players_embed.add_field(
+                        name=loc.commands.players.no_team,
+                        value="\n".join(map(lambda p: p.mention, players))
+                    )
+                if team2:
+                    players_embed.add_field(
+                        name=loc.commands.players.team2,
+                        value="\n".join(map(lambda p: p.mention, team2))
+                    )
+
                 await ctx.reply(embed=players_embed)
             else:
                 await ctx.reply(embed=Embed(
@@ -174,21 +158,14 @@ class GameCog(Cog, name="game"):
         loc = await self.db.localization(ctx)
         
         async with ctx.typing():  # Final player list preparation and show
-            players, team1, team2 = map(
-                lambda result: map(int, result.split()),
-                await self.db.fetch("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
-            )
-            players = [await self.bot.fetch_user(id) for id in players]
-            team1 = [await self.bot.fetch_user(id) for id in team1]
-            team2 = [await self.bot.fetch_user(id) for id in team2]
+            players, team1, team2 = await self.db.fetch_teams(ctx)
 
-            if players:  # Dividing players into two teams randomly
-                random.shuffle(players)
-                for member in players:
-                    if len(team1) <= len(team2):
-                        team1.append(member)
-                    else:
-                        team2.append(member)
+            random.shuffle(players)
+            for member in players:  # Dividing players into two teams randomly
+                if len(team1) <= len(team2):
+                    team1.append(member)
+                else:
+                    team2.append(member)
             
             if len(team1) < 2 or len(team2) < 2:
                 await util.send_error(ctx, loc.errors.title, loc.errors.not_enough_players)
@@ -198,12 +175,7 @@ class GameCog(Cog, name="game"):
                 await util.send_error(ctx, loc.errors.title, loc.errors.too_many_players)
                 return
 
-            team1_id = map(lambda player: str(player.id), team1)
-            team2_id = map(lambda player: str(player.id), team2)
-            await self.db.exec_and_commit(
-                "UPDATE guilds SET players=?, team1=?, team2=? WHERE id=?",
-                ("", " ".join(team1_id), " ".join(team2_id), ctx.guild.id)  # There are no players without team left
-            )
+            await self.db.save_teams(ctx, [], team1, team2)
             
             final_show = self.bot.get_command("players")
             await final_show.__call__(ctx, final=True)
@@ -219,7 +191,7 @@ class GameCog(Cog, name="game"):
         language = await self.bot.wait_for(
             "message",
             check=lambda msg: msg.channel == ctx.channel and
-                              msg.author in (team1 + team2) and
+                              msg.author == ctx.author and
                               msg.content.lower() in dictionaries.keys()
         )
         language = language.content.lower()
@@ -230,14 +202,14 @@ class GameCog(Cog, name="game"):
             description="{}\n\n{}".format("\n".join(dict_msg_desc), loc.commands.start.dict_selection_desc),
             color=Colors.purple
         ))
-        for ind, _ in enumerate(dictionaries[language]):
-            await dict_msg.add_reaction(REACTION_NUMBERS[ind])
+        for r_num in REACTION_NUMBERS[:len(dictionaries[language])]:
+            await dict_msg.add_reaction(r_num)
         await asyncio.sleep(15)
 
         new_dict_msg = await ctx.channel.fetch_message(dict_msg.id)
-        emojis = await util.most_count_reaction_emojis(new_dict_msg, team1 + team2)
+        emojis = await util.most_count_reaction_emojis(new_dict_msg, chain(team1, team2))
 
-        potential_dicts = map(lambda em: tuple(dictionaries[language].keys())[REACTION_NUMBERS.index(em)], emojis)
+        potential_dicts = map(lambda e: tuple(dictionaries[language].keys())[REACTION_NUMBERS.index(e)], emojis)
         game_dict_name = random.choice(tuple(potential_dicts))
         await ctx.send(embed=Embed(
             title=loc.commands.start.dict_selected,
@@ -247,27 +219,27 @@ class GameCog(Cog, name="game"):
 
         # Captains selection
         cap_selection_list = map(
-            lambda ind, player: f"**{ALPHABET[ind]}** - {player.mention}",
-            range(len(team1)), team1
+            lambda letter, player: f"**{letter}** - {player.mention}",
+            ALPHABET, team1
         )
         cap_msg = await ctx.send(embed=Embed(
             title=loc.commands.start.cap_selection_title.format(loc.game.red),
             description=loc.commands.start.cap_selection_desc.format("\n".join(cap_selection_list)),
             color=Colors.red
         ))
-        await cap_msg.add_reaction("🇷")
-        for ind, _ in enumerate(team1):
-            await cap_msg.add_reaction(REACTION_ALPHABET[ind])
+        await cap_msg.add_reaction(REACTION_R)
+        for r_letter in REACTION_ALPHABET[:len(team1)]:
+            await cap_msg.add_reaction(r_letter)
         await asyncio.sleep(15)
 
         # Have to get the message object again with reactions in it
         new_cap_msg = await ctx.channel.fetch_message(cap_msg.id)
         emojis = await util.most_count_reaction_emojis(new_cap_msg, team1)
         
-        if "🇷" in emojis:
+        if REACTION_R in emojis:
             team1_cap = random.choice(team1)
         else:
-            potential_caps = map(lambda em: team1[REACTION_ALPHABET.index(em)], emojis)
+            potential_caps = map(lambda e: team1[REACTION_ALPHABET.index(e)], emojis)
             team1_cap = random.choice(tuple(potential_caps))
         team1_pl = team1.copy()
         team1_pl.remove(team1_cap)
@@ -280,27 +252,27 @@ class GameCog(Cog, name="game"):
 
         # The same code for team2_cap
         cap_selection_list = map(
-            lambda ind, player: f"**{ALPHABET[ind]}** - {player.mention}",
-            range(len(team2)), team2
+            lambda letter, player: f"**{letter}** - {player.mention}",
+            ALPHABET, team2
         )
-        msg = await ctx.send(embed=Embed(
+        cap_msg = await ctx.send(embed=Embed(
             title=loc.commands.start.cap_selection_title.format(loc.game.blue),
             description=loc.commands.start.cap_selection_desc.format("\n".join(cap_selection_list)),
             color=Colors.blue
         ))
-        await msg.add_reaction("🇷")
-        for ind, _ in enumerate(team2):
-            await msg.add_reaction(REACTION_ALPHABET[ind])
+        await cap_msg.add_reaction(REACTION_R)
+        for r_letter in REACTION_ALPHABET[:len(team2)]:
+            await cap_msg.add_reaction(r_letter)
         await asyncio.sleep(15)
 
         # Have to get the message object again with reactions in it
         new_cap_msg = await ctx.channel.fetch_message(cap_msg.id)
         emojis = await util.most_count_reaction_emojis(new_cap_msg, team2)
         
-        if "🇷" in emojis:
+        if REACTION_R in emojis:
             team2_cap = random.choice(team2)
         else:
-            potential_caps = map(lambda em: team2[REACTION_ALPHABET.index(em)], emojis)
+            potential_caps = map(lambda e: team2[REACTION_ALPHABET.index(e)], emojis)
             team2_cap = random.choice(tuple(potential_caps))
         team2_pl = team2.copy()
         team2_pl.remove(team2_cap)
@@ -322,7 +294,7 @@ class GameCog(Cog, name="game"):
             title=loc.game.start_notification_title,
             description=loc.game.start_notification_desc_cap.format(
                 loc.game.red,
-                "\n".join([p.mention for p in team1_pl])
+                "\n".join(map(lambda p: p.mention, team1_pl))
             ),
             color=Colors.red
         ))
@@ -334,7 +306,7 @@ class GameCog(Cog, name="game"):
                 description=loc.game.start_notification_desc_pl.format(
                     loc.game.red,
                     team1_cap.mention,
-                    "\n".join([p.mention for p in team1_pl_without])
+                    "\n".join(map(lambda p: p.mention, team1_pl_without))
                 ),
                 color=Colors.red
             ))
@@ -343,7 +315,7 @@ class GameCog(Cog, name="game"):
             title=loc.game.start_notification_title,
             description=loc.game.start_notification_desc_cap.format(
                 loc.game.blue,
-                "\n".join([p.mention for p in team2_pl])
+                "\n".join(map(lambda p: p.mention, team2_pl))
             ),
             color=Colors.blue
         ))
@@ -355,94 +327,94 @@ class GameCog(Cog, name="game"):
                 description=loc.game.start_notification_desc_pl.format(
                     loc.game.blue,
                     team2_cap.mention,
-                    "\n".join([p.mention for p in team2_pl_without])
+                    "\n".join(map(lambda p: p.mention, team2_pl_without))
                 ),
                 color=Colors.blue
             ))
 
-        team1_words, team2_words, endgame_word, other_words = gen.words(
+        team1_words, team2_words, endgame_word, no_team_words = gen.words(
             lang=language, dict_name=game_dict_name
         )
         opened_words = []
-        order = list(team1_words + team2_words + (endgame_word,) + other_words)  # endgame_word is a single word
+        available_words = list(team1_words + team2_words + (endgame_word,) + no_team_words)  # endgame_word is single
+        order = available_words.copy()  # Has to be a list
         random.shuffle(order)
-        available_words = order.copy()  # Has to be a list
         order = tuple(order)
 
         if len(team1_words) > len(team2_words):
-            first_color = loc.game.red
-            first_cap = team1_cap
-            first_pl = team1_pl
-            first_words = team1_words
-            second_color = loc.game.blue
-            second_cap = team2_cap
-            second_pl = team2_pl
-            second_words = team2_words
+            current_color = loc.game.red
+            current_cap = team1_cap
+            current_pl = team1_pl
+            current_words = team1_words
+            other_color = loc.game.blue
+            other_cap = team2_cap
+            other_pl = team2_pl
+            other_words = team2_words
         else:
-            first_color = loc.game.blue
-            first_cap = team2_cap
-            first_pl = team2_pl
-            first_words = team2_words
-            second_color = loc.game.red
-            second_cap = team1_cap
-            second_pl = team1_pl
-            second_words = team1_words
+            current_color = loc.game.blue
+            current_cap = team2_cap
+            current_pl = team2_pl
+            current_words = team2_words
+            other_color = loc.game.red
+            other_cap = team1_cap
+            other_pl = team1_pl
+            other_words = team1_words
 
         # Mainloop
         game = True
         first_round = True
         while game:
-            gen.field(team1_words, team2_words, endgame_word, other_words, opened_words, order, ctx.guild.id)
-            await util.send_fields(ctx, first_cap, second_cap)
+            gen.field(team1_words, team2_words, endgame_word, no_team_words, opened_words, order, ctx.guild.id)
+            await util.send_fields(ctx, current_cap, other_cap)
 
             if first_round:
                 shutil.copy(
-                    os.path.join("images", f"{ctx.guild.id}-captain.png"),
-                    os.path.join("images", f"{ctx.guild.id}-captain-initial.png")
+                    Paths.cap_img(ctx.guild.id),
+                    Paths.cap_img_init(ctx.guild.id)
                 )
                 first_round = False
             
             await ctx.send(embed=Embed(
                 title=loc.game.waiting_title,
-                description=loc.game.waiting_desc_cap.format(first_color),
-                color=Colors.red if first_color == loc.game.red else Colors.blue
+                description=loc.game.waiting_desc_cap.format(current_color),
+                color=Colors.red if current_color == loc.game.red else Colors.blue
             ))
-            await first_cap.send(embed=Embed(
+            await current_cap.send(embed=Embed(
                 title=loc.game.cap_move_request_title,
                 description=loc.game.cap_move_request_desc.format("animal 3" if language == "en" else "животное 3"),
-                color=Colors.red if first_color == loc.game.red else Colors.blue
+                color=Colors.red if current_color == loc.game.red else Colors.blue
             ))
 
             move_msg = await self.bot.wait_for(
                 "message",
-                check=lambda msg: msg.channel == first_cap.dm_channel and
+                check=lambda msg: msg.channel == current_cap.dm_channel and
                                   re.fullmatch(r"\w+ \d+", msg.content) and
                                   not msg.content.endswith(" 0")
             )
             move = move_msg.content
             word_count = int(move.split()[-1])
 
-            await first_cap.send(embed=Embed(
+            await current_cap.send(embed=Embed(
                 title=loc.game.cap_move_accepted,
-                color=Colors.red if first_color == loc.game.red else Colors.blue
+                color=Colors.red if current_color == loc.game.red else Colors.blue
             ))
             await ctx.send(embed=Embed(
-                title=loc.game.cap_move_notification_title.format(first_color),
+                title=loc.game.cap_move_notification_title.format(current_color),
                 description=loc.game.cap_move_notification_desc.format(move),
-                color=Colors.red if first_color == loc.game.red else Colors.blue
+                color=Colors.red if current_color == loc.game.red else Colors.blue
             ))
 
             await ctx.send(embed=Embed(
                 title=loc.game.waiting_title,
-                description=f"{loc.game.waiting_desc_pl.format(first_color)}\n\n{loc.game.pl_move_instructions}",
-                color=Colors.red if first_color == loc.game.red else Colors.blue
+                description=f"{loc.game.waiting_desc_pl.format(current_color)}\n\n{loc.game.pl_move_instructions}",
+                color=Colors.red if current_color == loc.game.red else Colors.blue
             ))
             while word_count >= 0:
                 # >= because of the rule that players can open one more word than their captain supposed them to
                 move_msg = await self.bot.wait_for(
                     "message",
                     check=lambda msg: msg.channel == ctx.channel and
-                                      msg.author in first_pl and
+                                      msg.author in current_pl and
                                       (msg.content.lower() in available_words or msg.content in ("0", "000"))
                 )
                 move = move_msg.content.lower()
@@ -457,7 +429,7 @@ class GameCog(Cog, name="game"):
                         color=Colors.purple
                     ))
                     
-                    pros, cons = await util.pros_and_cons(stop_msg, 15, team1 + team2)
+                    pros, cons = await util.pros_and_cons(stop_msg, 15, chain(team1, team2))
                     if pros > cons:
                         await ctx.send(embed=Embed(
                             title=loc.game.game_stopped_title,
@@ -478,78 +450,78 @@ class GameCog(Cog, name="game"):
                 
                 opened_words.append(move)
                 available_words.remove(move)
-                gen.field(team1_words, team2_words, endgame_word, other_words, opened_words, order, ctx.guild.id)
+                gen.field(team1_words, team2_words, endgame_word, no_team_words, opened_words, order, ctx.guild.id)
 
-                if move in other_words:
+                if move in no_team_words:
                     await move_msg.reply(embed=Embed(
                         title=loc.game.miss_title,
                         description=loc.game.miss_desc_no_team_guild,
                         color=Colors.white
                     ))
-                    await first_cap.send(embed=Embed(
+                    await current_cap.send(embed=Embed(
                         title=loc.game.miss_title,
                         description=loc.game.miss_desc_no_team_dm.format(move),
                         color=Colors.white
                     ))
-                    await second_cap.send(embed=Embed(
+                    await other_cap.send(embed=Embed(
                         title=loc.game.opponents_miss_title,
                         description=loc.game.opponents_miss_desc.format(move),
                         color=Colors.white
                     ))
 
                     if word_count > 0:  # If quitting after this move, field will be sent twice in a row
-                        await util.send_fields(ctx, first_cap, second_cap)
-                elif move in second_words:
+                        await util.send_fields(ctx, current_cap, other_cap)
+                elif move in other_words:
                     await move_msg.reply(embed=Embed(
                         title=loc.game.miss_title,
                         description=loc.game.miss_desc_other_team_guild,
-                        color=Colors.red if second_color == loc.game.red else Colors.blue
+                        color=Colors.red if other_color == loc.game.red else Colors.blue
                     ))
-                    await first_cap.send(embed=Embed(
+                    await current_cap.send(embed=Embed(
                         title=loc.game.miss_title,
                         description=loc.game.miss_desc_other_team_dm.format(move),
-                        color=Colors.red if second_color == loc.game.red else Colors.blue
+                        color=Colors.red if other_color == loc.game.red else Colors.blue
                     ))
-                    await second_cap.send(embed=Embed(
+                    await other_cap.send(embed=Embed(
                         title=loc.game.lucky_title,
                         description=loc.game.lucky_desc_your_team.format(move),
-                        color=Colors.red if second_color == loc.game.red else Colors.blue
+                        color=Colors.red if other_color == loc.game.red else Colors.blue
                     ))
 
-                    if set(second_words) <= set(opened_words):  # If all second_words are opened
-                        await util.send_fields(ctx, first_cap, second_cap)
+                    if set(other_words) <= set(opened_words):  # If all second_words are opened
+                        await util.send_fields(ctx, current_cap, other_cap)
                         
                         await ctx.send(embed=Embed(
                             title=loc.game.game_over_title,
-                            description=loc.game.game_over_desc_all.format(second_color),
-                            color=Colors.red if second_color == loc.game.red else Colors.blue
+                            description=loc.game.game_over_desc_all.format(other_color),
+                            color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
 
-                        await first_cap.send(embed=Embed(
+                        await current_cap.send(embed=Embed(
                             title=loc.game.your_team_lost_title,
                             description=loc.game.your_team_lost_desc,
-                            color=Colors.red if second_color == loc.game.red else Colors.blue
+                            color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(first_cap.id, ("games", "games_cap"))
-                        for player in first_pl:
+                        await self.db.increase_stats(current_cap.id, ("games", "games_cap"))
+                        for player in current_pl:
                             await player.send(embed=Embed(
                                 title=loc.game.your_team_lost_title,
                                 description=loc.game.your_team_lost_desc,
-                                color=Colors.red if second_color == loc.game.red else Colors.blue
+                                color=Colors.red if other_color == loc.game.red else Colors.blue
                             ))
                             await self.db.increase_stats(player.id, ("games",))
                         
-                        await second_cap.send(embed=Embed(
+                        await other_cap.send(embed=Embed(
                             title=loc.game.your_team_won_title,
                             description=loc.game.your_team_won_desc,
-                            color=Colors.red if second_color == loc.game.red else Colors.blue
+                            color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(second_cap.id, ("games", "games_cap", "wins", "wins_cap"))
-                        for player in second_pl:
+                        await self.db.increase_stats(other_cap.id, ("games", "games_cap", "wins", "wins_cap"))
+                        for player in other_pl:
                             await player.send(embed=Embed(
                                 title=loc.game.your_team_won_title,
                                 description=loc.game.your_team_won_desc,
-                                color=Colors.red if second_color == loc.game.red else Colors.blue
+                                color=Colors.red if other_color == loc.game.red else Colors.blue
                             ))
                             await self.db.increase_stats(player.id, ("games", "wins"))
 
@@ -563,50 +535,50 @@ class GameCog(Cog, name="game"):
                         description=loc.game.miss_desc_endgame_guild,
                         color=Colors.black
                     ))
-                    await first_cap.send(embed=Embed(
+                    await current_cap.send(embed=Embed(
                         title=loc.game.miss_title,
                         description=loc.game.miss_desc_endgame_dm.format(move),
                         color=Colors.black
                     ))
-                    await second_cap.send(embed=Embed(
+                    await other_cap.send(embed=Embed(
                         title=loc.game.lucky_title,
                         description=loc.game.lucky_desc_endgame.format(move),
                         color=Colors.black
                     ))
 
-                    await util.send_fields(ctx, first_cap, second_cap)
+                    await util.send_fields(ctx, current_cap, other_cap)
                     
                     await ctx.send(embed=Embed(
                         title=loc.game.game_over_title,
-                        description=loc.game.game_over_desc_endgame.format(second_color, first_color),
-                        color=Colors.red if second_color == loc.game.red else Colors.blue
+                        description=loc.game.game_over_desc_endgame.format(other_color, current_color),
+                        color=Colors.red if other_color == loc.game.red else Colors.blue
                     ))
                     
-                    await first_cap.send(embed=Embed(
+                    await current_cap.send(embed=Embed(
                         title=loc.game.your_team_lost_title,
                         description=loc.game.your_team_lost_desc,
-                        color=Colors.red if second_color == loc.game.red else Colors.blue
+                        color=Colors.red if other_color == loc.game.red else Colors.blue
                     ))
-                    await self.db.increase_stats(first_cap.id, ("games", "games_cap"))
-                    for player in first_pl:
+                    await self.db.increase_stats(current_cap.id, ("games", "games_cap"))
+                    for player in current_pl:
                         await player.send(embed=Embed(
                             title=loc.game.your_team_lost_title,
                             description=loc.game.your_team_lost_desc,
-                            color=Colors.red if second_color == loc.game.red else Colors.blue
+                            color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
                         await self.db.increase_stats(player.id, ("games",))
                     
-                    await second_cap.send(embed=Embed(
+                    await other_cap.send(embed=Embed(
                         title=loc.game.your_team_won_title,
                         description=loc.game.your_team_won_desc,
-                        color=Colors.red if second_color == loc.game.red else Colors.blue
+                        color=Colors.red if other_color == loc.game.red else Colors.blue
                     ))
-                    await self.db.increase_stats(second_cap.id, ("games", "games_cap", "wins", "wins_cap"))
-                    for player in second_pl:
+                    await self.db.increase_stats(other_cap.id, ("games", "games_cap", "wins", "wins_cap"))
+                    for player in other_pl:
                         await player.send(embed=Embed(
                             title=loc.game.your_team_won_title,
                             description=loc.game.your_team_won_desc,
-                            color=Colors.red if second_color == loc.game.red else Colors.blue
+                            color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
                         await self.db.increase_stats(player.id, ("games", "wins"))
 
@@ -616,53 +588,53 @@ class GameCog(Cog, name="game"):
                     await move_msg.reply(embed=Embed(
                         title=loc.game.success_title,
                         description=loc.game.success_desc_guild,
-                        color=Colors.red if first_color == loc.game.red else Colors.blue
+                        color=Colors.red if current_color == loc.game.red else Colors.blue
                     ))
-                    await first_cap.send(embed=Embed(
+                    await current_cap.send(embed=Embed(
                         title=loc.game.success_title,
                         description=loc.game.success_desc_dm.format(move),
-                        color=Colors.red if first_color == loc.game.red else Colors.blue
+                        color=Colors.red if current_color == loc.game.red else Colors.blue
                     ))
-                    await second_cap.send(embed=Embed(
+                    await other_cap.send(embed=Embed(
                         title=loc.game.opponents_success_title,
                         description=loc.game.opponents_success_desc.format(move),
-                        color=Colors.red if first_color == loc.game.red else Colors.blue
+                        color=Colors.red if current_color == loc.game.red else Colors.blue
                     ))
 
-                    if set(first_words) <= set(opened_words):  # If all first_words are opened
-                        await util.send_fields(ctx, first_cap, second_cap)
+                    if set(current_words) <= set(opened_words):  # If all first_words are opened
+                        await util.send_fields(ctx, current_cap, other_cap)
                         
                         await ctx.send(embed=Embed(
                             title=loc.game.game_over_title,
-                            description=loc.game.game_over_desc_all.format(first_color),
-                            color=Colors.red if first_color == loc.game.red else Colors.blue
+                            description=loc.game.game_over_desc_all.format(current_color),
+                            color=Colors.red if current_color == loc.game.red else Colors.blue
                         ))
                         
-                        await first_cap.send(embed=Embed(
+                        await current_cap.send(embed=Embed(
                             title=loc.game.your_team_won_title,
                             description=loc.game.your_team_won_desc,
-                            color=Colors.red if first_color == loc.game.red else Colors.blue
+                            color=Colors.red if current_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(first_cap.id, ("games", "games_cap", "wins", "wins_cap"))
-                        for player in first_pl:
+                        await self.db.increase_stats(current_cap.id, ("games", "games_cap", "wins", "wins_cap"))
+                        for player in current_pl:
                             await player.send(embed=Embed(
                                 title=loc.game.your_team_won_title,
                                 description=loc.game.your_team_won_desc,
-                                color=Colors.red if first_color == loc.game.red else Colors.blue
+                                color=Colors.red if current_color == loc.game.red else Colors.blue
                             ))
                             await self.db.increase_stats(player.id, ("games", "wins"))
                         
-                        await second_cap.send(embed=Embed(
+                        await other_cap.send(embed=Embed(
                             title=loc.game.your_team_lost_title,
                             description=loc.game.your_team_lost_desc,
-                            color=Colors.red if first_color == loc.game.red else Colors.blue
+                            color=Colors.red if current_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(second_cap.id, ("games", "games_cap"))
-                        for player in second_pl:
+                        await self.db.increase_stats(other_cap.id, ("games", "games_cap"))
+                        for player in other_pl:
                             await player.send(embed=Embed(
                                 title=loc.game.your_team_lost_title,
                                 description=loc.game.your_team_lost_desc,
-                                color=Colors.red if first_color == loc.game.red else Colors.blue
+                                color=Colors.red if current_color == loc.game.red else Colors.blue
                             ))
                             await self.db.increase_stats(player.id, ("games",))
 
@@ -670,306 +642,29 @@ class GameCog(Cog, name="game"):
                         break
 
                     if word_count > 0:  # If quitting after this move, field will be sent twice in a row
-                        await util.send_fields(ctx, first_cap, second_cap)
+                        await util.send_fields(ctx, current_cap, other_cap)
 
                 word_count -= 1
             
-            if not game:  # checking if the game is over after first team move (a crutch for loop check)
-                break
-            
-            gen.field(team1_words, team2_words, endgame_word, other_words, opened_words, order, ctx.guild.id)
-            await util.send_fields(ctx, first_cap, second_cap)
-            
-            await ctx.send(embed=Embed(
-                title=loc.game.waiting_title,
-                description=loc.game.waiting_desc_cap.format(second_color),
-                color=Colors.red if second_color == loc.game.red else Colors.blue
-            ))
-            await second_cap.send(embed=Embed(
-                title=loc.game.cap_move_request_title,
-                description=loc.game.cap_move_request_desc.format("animal 3" if language == "en" else "животное 3"),
-                color=Colors.red if second_color == loc.game.red else Colors.blue
-            ))
-
-            move_msg = await self.bot.wait_for(
-                "message",
-                check=lambda msg: msg.channel == second_cap.dm_channel and
-                                  re.fullmatch(r"\w+ \d+", msg.content) and
-                                  not msg.content.endswith(" 0")
-            )
-            move = move_msg.content
-            word_count = int(move.split()[-1])
-
-            await second_cap.send(embed=Embed(
-                title=loc.game.cap_move_accepted,
-                color=Colors.red if second_color == loc.game.red else Colors.blue
-            ))
-            await ctx.send(embed=Embed(
-                title=loc.game.cap_move_notification_title.format(second_color),
-                description=loc.game.cap_move_notification_desc.format(move),
-                color=Colors.red if second_color == loc.game.red else Colors.blue
-            ))
-
-            await ctx.send(embed=Embed(
-                title=loc.game.waiting_title,
-                description=f"{loc.game.waiting_desc_pl.format(second_color)}\n\n{loc.game.pl_move_instructions}",
-                color=Colors.red if second_color == loc.game.red else Colors.blue
-            ))
-            while word_count >= 0:
-                # >= because of the rule that players can open one more word than their captain said
-                move_msg = await self.bot.wait_for(
-                    "message",
-                    check=lambda msg: msg.channel == ctx.channel and
-                                      msg.author in second_pl and
-                                      (msg.content.lower() in available_words or msg.content in ("0", "000"))
-                )
-                move = move_msg.content.lower()
-
-                if move == "0":
-                    await move_msg.add_reaction("🆗")
-                    break
-                if move == "000":
-                    stop_msg = await move_msg.reply(embed=Embed(
-                        title=loc.game.voting_for_stopping_title,
-                        description=loc.game.voting_for_stopping_desc,
-                        color=Colors.purple
-                    ))
-                    
-                    pros, cons = await util.pros_and_cons(stop_msg, 15, team1 + team2)
-                    if pros > cons:
-                        await ctx.send(embed=Embed(
-                            title=loc.game.game_stopped_title,
-                            description=loc.game.game_stopped_desc,
-                            color=Colors.purple
-                        ))
-
-                        game = False
-                        break
-                    else:
-                        await ctx.send(embed=Embed(
-                            title=loc.game.game_continued_title,
-                            description=loc.game.game_continued_desc,
-                            color=Colors.purple
-                        ))
-                        
-                        continue  # No need to generate a new field or decrease word_count
-
-                opened_words.append(move)
-                available_words.remove(move)
-                gen.field(team1_words, team2_words, endgame_word, other_words, opened_words, order, ctx.guild.id)
-
-                if move in other_words:
-                    await move_msg.reply(embed=Embed(
-                        title=loc.game.miss_title,
-                        description=loc.game.miss_desc_no_team_guild,
-                        color=Colors.white
-                    ))
-                    await second_cap.send(embed=Embed(
-                        title=loc.game.miss_title,
-                        description=loc.game.miss_desc_no_team_dm.format(move),
-                        color=Colors.white
-                    ))
-                    await first_cap.send(embed=Embed(
-                        title=loc.game.opponents_miss_title,
-                        description=loc.game.opponents_miss_desc.format(move),
-                        color=Colors.white
-                    ))
-
-                    if word_count > 0:  # If quitting after this move, field will be sent twice in a row
-                        await util.send_fields(ctx, first_cap, second_cap)
-                elif move in first_words:
-                    await move_msg.reply(embed=Embed(
-                        title=loc.game.miss_title,
-                        description=loc.game.miss_desc_other_team_guild,
-                        color=Colors.red if first_color == loc.game.red else Colors.blue
-                    ))
-                    await second_cap.send(embed=Embed(
-                        title=loc.game.miss_title,
-                        description=loc.game.miss_desc_other_team_dm.format(move),
-                        color=Colors.red if first_color == loc.game.red else Colors.blue
-                    ))
-                    await first_cap.send(embed=Embed(
-                        title=loc.game.lucky_title,
-                        description=loc.game.lucky_desc_your_team.format(move),
-                        color=Colors.red if first_color == loc.game.red else Colors.blue
-                    ))
-
-                    if set(first_words) <= set(opened_words):  # If all first_words are opened
-                        await util.send_fields(ctx, first_cap, second_cap)
-                        
-                        await ctx.send(embed=Embed(
-                            title=loc.game.game_over_title,
-                            description=loc.game.game_over_desc_all.format(first_color),
-                            color=Colors.red if first_color == loc.game.red else Colors.blue
-                        ))
-                        
-                        await first_cap.send(embed=Embed(
-                            title=loc.game.your_team_won_title,
-                            description=loc.game.your_team_won_desc,
-                            color=Colors.red if first_color == loc.game.red else Colors.blue
-                        ))
-                        await self.db.increase_stats(first_cap.id, ("games", "games_cap", "wins", "wins_cap"))
-                        for player in first_pl:
-                            await player.send(embed=Embed(
-                                title=loc.game.your_team_won_title,
-                                description=loc.game.your_team_won_desc,
-                                color=Colors.red if first_color == loc.game.red else Colors.blue
-                            ))
-                            await self.db.increase_stats(player.id, ("games", "wins"))
-                        
-                        await second_cap.send(embed=Embed(
-                            title=loc.game.your_team_lost_title,
-                            description=loc.game.your_team_lost_desc,
-                            color=Colors.red if first_color == loc.game.red else Colors.blue
-                        ))
-                        await self.db.increase_stats(second_cap.id, ("games", "games_cap"))
-                        for player in second_pl:
-                            await player.send(embed=Embed(
-                                title=loc.game.your_team_lost_title,
-                                description=loc.game.your_team_lost_desc,
-                                color=Colors.red if first_color == loc.game.red else Colors.blue
-                            ))
-                            await self.db.increase_stats(player.id, ("games",))
-
-                        game = False
-                        break
-                    
-                    break
-                elif move == endgame_word:
-                    await move_msg.reply(embed=Embed(
-                        title=loc.game.miss_title,
-                        description=loc.game.miss_desc_endgame_guild,
-                        color=Colors.black
-                    ))
-                    await second_cap.send(embed=Embed(
-                        title=loc.game.miss_title,
-                        description=loc.game.miss_desc_endgame_dm.format(move),
-                        color=Colors.black
-                    ))
-                    await first_cap.send(embed=Embed(
-                        title=loc.game.lucky_title,
-                        description=loc.game.lucky_desc_endgame.format(move),
-                        color=Colors.black
-                    ))
-
-                    await util.send_fields(ctx, first_cap, second_cap)
-                    
-                    await ctx.send(embed=Embed(
-                        title=loc.game.game_over_title,
-                        description=loc.game.game_over_desc_endgame.format(first_color, second_color),
-                        color=Colors.red if first_color == loc.game.red else Colors.blue
-                    ))
-                    
-                    await first_cap.send(embed=Embed(
-                        title=loc.game.your_team_won_title,
-                        description=loc.game.your_team_won_desc,
-                        color=Colors.red if first_color == loc.game.red else Colors.blue
-                    ))
-                    await self.db.increase_stats(first_cap.id, ("games", "games_cap", "wins", "wins_cap"))
-                    for player in first_pl:
-                        await player.send(embed=Embed(
-                            title=loc.game.your_team_won_title,
-                            description=loc.game.your_team_won_desc,
-                            color=Colors.red if first_color == loc.game.red else Colors.blue
-                        ))
-                        await self.db.increase_stats(player.id, ("games", "wins"))
-                    
-                    await second_cap.send(embed=Embed(
-                        title=loc.game.your_team_lost_title,
-                        description=loc.game.your_team_lost_desc,
-                        color=Colors.red if first_color == loc.game.red else Colors.blue
-                    ))
-                    await self.db.increase_stats(second_cap.id, ("games", "games_cap"))
-                    for player in second_pl:
-                        await player.send(embed=Embed(
-                            title=loc.game.your_team_lost_title,
-                            description=loc.game.your_team_lost_desc,
-                            color=Colors.red if first_color == loc.game.red else Colors.blue
-                        ))
-                        await self.db.increase_stats(player.id, ("games",))
-
-                    game = False
-                    break
-                else:  # They guessed
-                    await move_msg.reply(embed=Embed(
-                        title=loc.game.success_title,
-                        description=loc.game.success_desc_guild,
-                        color=Colors.red if second_color == loc.game.red else Colors.blue
-                    ))
-                    await second_cap.send(embed=Embed(
-                        title=loc.game.success_title,
-                        description=loc.game.success_desc_dm.format(move),
-                        color=Colors.red if second_color == loc.game.red else Colors.blue
-                    ))
-                    await first_cap.send(embed=Embed(
-                        title=loc.game.opponents_success_title,
-                        description=loc.game.opponents_success_desc.format(move),
-                        color=Colors.red if second_color == loc.game.red else Colors.blue
-                    ))
-
-                    if set(second_words) <= set(opened_words):  # If all second_words are opened
-                        await util.send_fields(ctx, first_cap, second_cap)
-                        
-                        await ctx.send(embed=Embed(
-                            title=loc.game.game_over_title,
-                            description=loc.game.game_over_desc_all.format(second_color),
-                            color=Colors.red if second_color == loc.game.red else Colors.blue
-                        ))
-
-                        await first_cap.send(embed=Embed(
-                            title=loc.game.your_team_lost_title,
-                            description=loc.game.your_team_lost_desc,
-                            color=Colors.red if second_color == loc.game.red else Colors.blue
-                        ))
-                        await self.db.increase_stats(first_cap.id, ("games", "games_cap"))
-                        for player in first_pl:
-                            await player.send(embed=Embed(
-                                title=loc.game.your_team_lost_title,
-                                description=loc.game.your_team_lost_desc,
-                                color=Colors.red if second_color == loc.game.red else Colors.blue
-                            ))
-                            await self.db.increase_stats(player.id, ("games",))
-                        
-                        await second_cap.send(embed=Embed(
-                            title=loc.game.your_team_won_title,
-                            description=loc.game.your_team_won_desc,
-                            color=Colors.red if second_color == loc.game.red else Colors.blue
-                        ))
-                        await self.db.increase_stats(second_cap.id, ("games", "games_cap", "wins", "wins_cap"))
-                        for player in second_pl:
-                            await player.send(embed=Embed(
-                                title=loc.game.your_team_won_title,
-                                description=loc.game.your_team_won_desc,
-                                color=Colors.red if second_color == loc.game.red else Colors.blue
-                            ))
-                            await self.db.increase_stats(player.id, ("games", "wins"))
-
-                        game = False
-                        break
-
-                    if word_count > 0:  # If quitting after this move, field will be sent twice in a row
-                        await util.send_fields(ctx, first_cap, second_cap)
-
-                word_count -= 1
+            current_color, other_color = other_color, current_color
+            current_cap, other_cap = other_cap, current_cap
+            current_pl, other_pl = other_pl, current_pl
+            current_words, other_words = other_words, current_words
 
         # Sending initial captain filed to the guild text channel
-        with open(os.path.join("images", f"{ctx.guild.id}-captain-initial.png"), "rb") as init_cap_field_bin:
-            init_cap_field = File(init_cap_field_bin, filename="initial_captain_field.png")
-            await ctx.send(file=init_cap_field)
+        initial_cap_field = File(Paths.cap_img_init(ctx.guild.id), filename="initial_captain_field.png")
+        await ctx.send(file=initial_cap_field)
 
-        await self.db.exec_and_commit(
-            "UPDATE guilds SET team1=?, team2=? WHERE id=?",
-            ("", "", ctx.guild.id)
-        )
+        await self.db.save_teams(ctx, [], [], [])
         
-        os.remove(os.path.join("images", f"{ctx.guild.id}-player.png"))
-        os.remove(os.path.join("images", f"{ctx.guild.id}-captain.png"))
-        os.remove(os.path.join("images", f"{ctx.guild.id}-captain-initial.png"))
+        os.remove(Paths.pl_img(ctx.guild.id))
+        os.remove(Paths.cap_img(ctx.guild.id))
+        os.remove(Paths.cap_img_init(ctx.guild.id))
 
     @command(aliases=("stat", "ss", "st"))
-    async def stats(self, ctx: Context, member: Optional[Member] = None) -> None:
+    async def stats(self, ctx: Context, member: Member | None = None) -> None:
         member = member or ctx.author
-        name = f"**{member.nick if isinstance(ctx.channel, TextChannel) and member.nick else member.name}**"
+        name = f"**{member.display_name}**"
         
         loc = await self.db.localization(ctx)
         
@@ -1015,15 +710,15 @@ class GameCog(Cog, name="game"):
             value=loc.commands.stats.note,
             inline=False
         )
-        stats_embed.set_thumbnail(url=member.avatar_url)
+        stats_embed.set_thumbnail(url=member.display_avatar)
 
         await ctx.reply(embed=stats_embed)
 
 
 class SettingCog(Cog, name="settings"):
-    def __init__(self, bot: Bot, db: Database) -> None:
+    def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.db = db
+        self.db = Database()
 
     @command(aliases=("pre",))
     @is_moderator()
@@ -1103,6 +798,6 @@ class SettingCog(Cog, name="settings"):
             await msg.clear_reactions()
 
 
-def add_commands(bot: Bot, db: Database) -> None:
-    bot.add_cog(GameCog(bot, db))
-    bot.add_cog(SettingCog(bot, db))
+async def add_commands(bot: Bot) -> None:
+    await bot.add_cog(GameCog(bot))
+    await bot.add_cog(SettingCog(bot))

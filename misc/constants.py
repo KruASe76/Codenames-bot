@@ -1,6 +1,7 @@
-from discord import Color
+from pathlib import Path
+
 from PIL import ImageFont
-import os
+from discord import Color
 
 
 EMPTY = "\u2063"
@@ -11,11 +12,12 @@ LOGO_LINK = "https://codenames.me/favicon/apple-touch-icon-144x144.png"
 
 ALPHABET = "ABCDEFGHIJKLMNOPQSTUVWXYZ"  # Without letter R
 REACTION_ALPHABET = "🇦🇧🇨🇩🇪🇫🇬🇭🇮🇯🇰🇱🇲🇳🇴🇵🇶🇸🇹🇺🇻🇼🇽🇾🇿"  # Without R too
+REACTION_R = "🇷"
 REACTION_NUMBERS = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣")
 
 
-font = ImageFont.truetype(os.path.join("resources", "fonts", "RobotoCondensed-Bold.ttf"), 80, encoding="utf-8")
-big_font = ImageFont.truetype(os.path.join("resources", "fonts", "Roboto-Bold.ttf"), 350, encoding="utf-8")
+font = ImageFont.truetype(str(Path("resources", "fonts", "RobotoCondensed-Bold.ttf")), 80, encoding="utf-8")
+big_font = ImageFont.truetype(str(Path("resources", "fonts", "Roboto-Bold.ttf")), 350, encoding="utf-8")
 
 
 dictionaries = {
@@ -46,6 +48,27 @@ flags = {
     "ru": "🇷🇺"
 }
 flags_rev = {v: k for k, v in flags.items()}
+
+
+class Paths:
+    img_dir = Path("images")
+    db = Path("base.db")
+
+    @classmethod
+    def cap_img(cls, id: int) -> Path:
+        return Path(cls.img_dir, f"{id}-captain.png")
+
+    @classmethod
+    def cap_img_init(cls, id: int) -> Path:
+        return Path(cls.img_dir, f"{id}-captain-initial.png")
+
+    @classmethod
+    def pl_img(cls, id: int) -> Path:
+        return Path(cls.img_dir, f"{id}-player.png")
+
+    @classmethod
+    def dictionary(cls, language: str, name: str) -> Path:
+        return Path("resources", "dictionaries", language, f"{name}.txt")
 
 
 class FieldSizing:

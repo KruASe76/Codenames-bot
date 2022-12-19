@@ -1,17 +1,17 @@
+import inspect
+
 from discord import Embed
 from discord.ext.commands import Bot, Context, Command, Cog, command
-import inspect
-from typing import Optional
 
-from misc.database import Database
 from misc.constants import EMPTY, LOGO_LINK, Colors
+from misc.database import Database
 from misc.util import is_check_in_command
 
 
 class HelpCog(Cog, name="help"):
-    def __init__(self, bot: Bot, db: Database) -> None:
+    def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.db = db
+        self.db = Database()
 
     @command()
     async def help(self, ctx: Context, command: str = None) -> None:
@@ -21,7 +21,7 @@ class HelpCog(Cog, name="help"):
         prefix = "cdn " if prefix.strip() == self.bot.user.mention else prefix
 
         if command:
-            comm: Optional[Command] = self.bot.get_command(command)
+            comm: Command | None = self.bot.get_command(command)
 
             if not comm:
                 await ctx.reply(embed=Embed(
@@ -33,28 +33,28 @@ class HelpCog(Cog, name="help"):
 
             else:
                 title = loc.cogs[comm.cog_name].singular
-                col = Colors.purple
+                color = Colors.purple
 
                 comm_info = inspect.getfullargspec(comm.callback)
-                arg_list = comm_info.args[2:]  # Removing "self" and "ctx"
+                all_args = comm_info.args[2:]  # Removing "self" and "ctx"
                 default_args = comm_info.defaults or tuple()
 
                 names = (comm.name,) + comm.aliases
-                name = "{" + "|".join(names) + "}"
-                args = []
-                while len(arg_list) > len(default_args):
-                    args.append(f"<{arg_list[0]}>")
-                    arg_list.pop(0)
-                for ind, arg in enumerate(arg_list):
+                display_name = "{" + '|'.join(names) + "}"
+                display_args = []
+                while len(all_args) > len(default_args):
+                    display_args.append(f"<{all_args[0]}>")
+                    all_args.pop(0)
+                for arg, default_arg in zip(all_args, default_args):
                     if arg == "final":  # This argument is not for users
                         continue
-                    def_arg = default_args[ind]
+                    def_arg = default_arg
                     if def_arg:
                         if not def_arg.isdigit():
                             def_arg = f'"{def_arg}"'  # String type defaults stylization
                     else:
                         def_arg = None
-                    args.append(f"[{arg}={def_arg}]")
+                    display_args.append(f"[{arg}={def_arg}]")
 
                 guild = f"**[{loc.commands.help.guild}]**\n" if is_check_in_command(comm, "guild_only") else ""
 
@@ -65,12 +65,13 @@ class HelpCog(Cog, name="help"):
                     mod = ""
                     note = ""
 
-                desc = f"**`{prefix}{name}{' ' if args else ''}{' '.join(args)}`**\n\n{guild}{mod}{loc.help[comm.name].help}{note}"
+                desc = (f"**`{prefix}{display_name}{' ' if display_args else ''}{' '.join(display_args)}`**\n\n"
+                        f"{guild}{mod}{loc.help[comm.name].help}{note}")
 
             embed = Embed(
                 title=title,
                 description=desc,
-                color=col
+                color=color
             )
             embed.set_thumbnail(url=LOGO_LINK)
 
@@ -85,11 +86,12 @@ class HelpCog(Cog, name="help"):
                 if cog_name in ("events", "help"):
                     continue
 
-                def guild(command: Command):
+                def guild(command: Command) -> str:
                     return f"**[{loc.commands.help.guild}]** " if is_check_in_command(command, "guild_only") else ""
 
-                def mod(command: Command):
-                    return f"**[{loc.commands.help.moderator_shortened}]** " if is_check_in_command(command, "is_moderator") and ctx.guild else ""
+                def mod(command: Command) -> str:
+                    return f"**[{loc.commands.help.moderator_shortened}]** " \
+                        if is_check_in_command(command, "is_moderator") and ctx.guild else ""
 
                 cog_comms = map(
                     lambda comm: f"**`{prefix}{comm.name}`** - {guild(comm)}{mod(comm)}{loc.help[comm.name].brief}",
@@ -107,5 +109,5 @@ class HelpCog(Cog, name="help"):
         await ctx.reply(embed=embed)
 
 
-def add_help(bot: Bot, db: Database) -> None:
-    bot.add_cog(HelpCog(bot, db))
+async def add_help(bot: Bot) -> None:
+    await bot.add_cog(HelpCog(bot))

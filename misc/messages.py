@@ -12,7 +12,12 @@ class HelpCommand:
     hint: str
     command: str
 
-@dataclass
+@dataclass  # noqa: E302
+class RegisterCommand:
+    egg_r34_title: str
+    egg_r34_desc: str
+
+@dataclass  # noqa: E302
 class PlayersCommand:
     player_list: str
     final_player_list: str
@@ -21,7 +26,7 @@ class PlayersCommand:
     no_team: str
     empty_list: str
 
-@dataclass
+@dataclass  # noqa: E302
 class StartCommand:
     lang_selection_title: str
     lang_selection_desc: str
@@ -33,7 +38,7 @@ class StartCommand:
     cap_selected_title: str
     cap_selected_desc: str
 
-@dataclass
+@dataclass  # noqa: E302
 class StatsCommand:
     smbs_stats: str
     playing_since: str
@@ -45,23 +50,24 @@ class StatsCommand:
     winrate: str
     note: str
 
-@dataclass
+@dataclass  # noqa: E302
 class PrefixCommand:
     prefix_changed_title: str
     prefix_changed_desc: str
     new_prefix: str
     prefix_deleted: str
 
-@dataclass
+@dataclass  # noqa: E302
 class LanguageCommand:
     title: str
     desc_current: str
     desc_new: str
     desc_aborted: str
 
-@dataclass
+@dataclass  # noqa: E302
 class Commands:
     help: HelpCommand
+    register: RegisterCommand
     players: PlayersCommand
     start: StartCommand
     stats: StatsCommand
@@ -131,7 +137,7 @@ class HelpAndBrief:
     help: str
     brief: str = None
     
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.brief = self.brief or self.help
 
 
@@ -268,6 +274,10 @@ messages = {
                 hint="Learn a more detailed description of the command:",
                 command="command"
             ),
+            register=RegisterCommand(
+                egg_r34_title="No no no no no",
+                egg_r34_desc="We don't do that here :)"
+            ),
             players=PlayersCommand(
                 player_list="Player list",
                 final_player_list="Final player list",
@@ -321,8 +331,8 @@ messages = {
             invalid_team="**Invalid team number**\nThere are only 2 teams in the game.\nSelect one of them or do not "
                          "type the number to pick randomly.",
             not_registered="You are not registered to the game",
-            not_enough_players="**Not enough players**\nEach team must have **at least 2** players.",
-            too_many_players="**Too much players**\nEach team must have **no more than 25** players.",
+            not_enough_players="**Not enough players**\n**Each** team must have **at least 2** players.",
+            too_many_players="**Too much players**\n**Each** team must have **no more than 25** players.",
             never_played="{} haven't played Codenames yet"
         )
     ),
@@ -430,6 +440,10 @@ messages = {
                 hint="Получить более подробное описание команды:",
                 command="команда"
             ),
+            register=RegisterCommand(
+                egg_r34_title="Не не не не не",
+                egg_r34_desc="Такого здесь нет :)"
+            ),
             players=PlayersCommand(
                 player_list="Список игроков",
                 final_player_list="Окончательный список игроков",
@@ -484,8 +498,8 @@ messages = {
             invalid_team="**Недопустимый номер команды**\nВ игре есть только две команды.\nМожно выбрать одну из них "
                          "или не выбирать, и тогда она будет случайной.",
             not_registered="Вы и без того не зарегистрированы",
-            not_enough_players="**Недостаточно игроков**\nВ каждой команде должно быть **хотя бы 2** игрока.",
-            too_many_players="**Слишком много игроков**\nВ каждой команде должно быть **не более 25** игроков.",
+            not_enough_players="**Недостаточно игроков**\nВ **каждой** команде должно быть **хотя бы 2** игрока.",
+            too_many_players="**Слишком много игроков**\nВ **каждой** команде должно быть **не более 25** игроков.",
             never_played="{} еще не играл в Codenames"
         )
     )

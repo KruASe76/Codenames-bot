@@ -1,13 +1,12 @@
 .vscode/
 .idea/
+.fleet/
 
-/env*/
+/venv*/
 
 __pycache__/
 *.db-journal
 .DS_Store
-
-/.env
 
 /base.db
 /images/

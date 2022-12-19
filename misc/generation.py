@@ -1,15 +1,17 @@
-from PIL import Image, ImageDraw
-import random
-import os
 import math
+import os
+import random
+from typing import Iterable, Sequence
 
-from misc.constants import font, big_font, FieldSizing, Colors
+from PIL import Image, ImageDraw
+
+from misc.constants import font, big_font, Paths, FieldSizing, Colors
 
 
 # noinspection PyUnboundLocalVariable
 def field(
-    team1_words: tuple[str], team2_words: tuple[str], endgame_word: str, other_words: tuple[str],
-    opened_words: list[str], order: tuple[str],
+    team1_words: Iterable[str], team2_words: Iterable[str], endgame_word: str, no_team_words: Iterable[str],
+    opened_words: Iterable[str], order: Sequence[str],
     guild_id: int
 ) -> None:
     img = Image.new("RGB", (FieldSizing.width, FieldSizing.height), (255, 255, 255))
@@ -101,7 +103,7 @@ def field(
                     fill_col = Colors.black_fill
                     outline_col = Colors.black_fill
                     font_col = Colors.black_font
-            elif word in other_words:
+            elif word in no_team_words:
                 if word in opened_words:
                     fill_col = Colors.white_opened_cap_fill
                     outline_col = Colors.white_opened_cap_outline
@@ -152,7 +154,7 @@ def field(
                     fill_col = Colors.black_fill
                     outline_col = Colors.black_fill
                     font_col = Colors.black_font
-                elif word in other_words:
+                elif word in no_team_words:
                     fill_col = Colors.white_opened_pl_fill
                     outline_col = Colors.white_opened_pl_outline
                     font_col = Colors.white_opened_pl_font
@@ -185,14 +187,13 @@ def field(
                 anchor=FieldSizing.text_anchor
             )
 
-    os.makedirs(os.path.join(os.getcwd(), "images"), exist_ok=True)
-    cap_img.save(os.path.join(os.getcwd(), "images", f"{guild_id}-captain.png"))
-    pl_img.save(os.path.join(os.getcwd(), "images", f"{guild_id}-player.png"))
+    os.makedirs(Paths.img_dir, exist_ok=True)
+    cap_img.save(Paths.cap_img(guild_id))
+    pl_img.save(Paths.pl_img(guild_id))
+
 
 def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple[str]]:
-    with open(
-        os.path.join(os.getcwd(), "resources", "dictionaries", lang, f"{dict_name}.txt"), "r", encoding="utf-8"
-    ) as dictionary:
+    with open(Paths.dictionary(lang, dict_name), "r", encoding="utf-8") as dictionary:
         all_words = dictionary.read().lower().replace("ё", "е").split("\n")
     words: set[str] = set(random.sample(all_words, 25))
 
@@ -204,11 +205,11 @@ def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple
         team1_words = random.sample(tuple(words), 9)
         words.difference_update(team1_words)
         team2_words = random.sample(tuple(words), 8)
-        other_words = words.difference(team2_words)
+        no_team_words = words.difference(team2_words)
     else:
         team2_words = random.sample(tuple(words), 9)
         words.difference_update(team2_words)
         team1_words = random.sample(tuple(words), 8)
-        other_words = words.difference(team1_words)
+        no_team_words = words.difference(team1_words)
 
-    return tuple(team1_words), tuple(team2_words), endgame_word, tuple(other_words)
+    return tuple(team1_words), tuple(team2_words), endgame_word, tuple(no_team_words)
