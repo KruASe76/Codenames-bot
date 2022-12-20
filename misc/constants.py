@@ -4,7 +4,7 @@ from PIL import ImageFont
 from discord import Color
 
 
-EMPTY = "\u2063"
+EMPTY = "\u2063"  # invisible separator
 
 ADMINS = {689766059712315414, 790535470870298642, 783324731364737034}
 

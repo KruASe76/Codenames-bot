@@ -1,11 +1,9 @@
-import inspect
-
 from discord import Embed
 from discord.ext.commands import Bot, Context, Command, Cog, command
 
 from misc.constants import EMPTY, LOGO_LINK, Colors
 from misc.database import Database
-from misc.util import is_check_in_command
+from misc.util import process_param, is_check_in_command
 
 
 class HelpCog(Cog, name="help"):
@@ -31,56 +29,31 @@ class HelpCog(Cog, name="help"):
                 ))
                 return
 
-            else:
-                title = loc.cogs[comm.cog_name].singular
-                color = Colors.purple
+            names = '{' + '|'.join((comm.name,) + comm.aliases) + '}'
 
-                comm_info = inspect.getfullargspec(comm.callback)
-                all_args = comm_info.args[2:]  # Removing "self" and "ctx"
-                default_args = comm_info.defaults or tuple()
+            params = " ".join(filter(
+                lambda p: p,
+                map(process_param, *([*zip(*comm.clean_params.items())] if comm.clean_params else (tuple(), tuple())))
+            ))
 
-                names = (comm.name,) + comm.aliases
-                display_name = "{" + '|'.join(names) + "}"
-                display_args = []
-                while len(all_args) > len(default_args):
-                    display_args.append(f"<{all_args[0]}>")
-                    all_args.pop(0)
-                for arg, default_arg in zip(all_args, default_args):
-                    if arg == "final":  # This argument is not for users
-                        continue
-                    def_arg = default_arg
-                    if def_arg:
-                        if not def_arg.isdigit():
-                            def_arg = f'"{def_arg}"'  # String type defaults stylization
-                    else:
-                        def_arg = None
-                    display_args.append(f"[{arg}={def_arg}]")
-
-                guild = f"**[{loc.commands.help.guild}]**\n" if is_check_in_command(comm, "guild_only") else ""
-
-                if is_check_in_command(comm, "is_moderator") and ctx.guild:
-                    mod = f"**[{loc.commands.help.moderator}]**\n"
-                    note = f"\n\n_**{loc.commands.help.note}:**\n{loc.commands.help.about_moderator}_"
-                else:
-                    mod = ""
-                    note = ""
-
-                desc = (f"**`{prefix}{display_name}{' ' if display_args else ''}{' '.join(display_args)}`**\n\n"
-                        f"{guild}{mod}{loc.help[comm.name].help}{note}")
+            guild = f"**[{loc.commands.help.guild}]**\n" if is_check_in_command(comm, "guild_only") else ""
+            mod, note = (
+                f"**[{loc.commands.help.moderator}]**\n",
+                f"\n\n_**{loc.commands.help.note}:**\n{loc.commands.help.about_moderator}_"
+            ) if is_check_in_command(comm, "is_moderator") and ctx.guild else ("", "")
 
             embed = Embed(
-                title=title,
-                description=desc,
-                color=color
+                title=loc.cogs[comm.cog_name].singular,
+                description=f"**`{prefix}{names}{' ' if params else ''}{params}`**\n\n"
+                            f"{guild}{mod}{loc.help[comm.name].help}{note}",
+                color=Colors.purple
             )
-            embed.set_thumbnail(url=LOGO_LINK)
 
         else:
             embed = Embed(
                 title=loc.commands.help.command_list,
                 color=Colors.purple
             )
-            embed.set_thumbnail(url=LOGO_LINK)
 
             for cog_name, cog in self.bot.cogs.items():
                 if cog_name in ("events", "help"):
@@ -106,6 +79,7 @@ class HelpCog(Cog, name="help"):
                 inline=False
             )
 
+        embed.set_thumbnail(url=LOGO_LINK)
         await ctx.reply(embed=embed)
 
 

@@ -2,10 +2,21 @@ import asyncio
 from typing import Iterable
 
 from discord import Message, User, File, Embed, Reaction
-from discord.ext.commands import Command, Context
+from discord.ext.commands import Parameter, Command, Context
 
 from misc.constants import Paths, Colors
 
+
+def process_param(name: str, param: Parameter) -> str | None:
+    if name == "final":
+        return
+
+    if param.required:
+        return f"<{param.name}>"
+
+    default = None if not param.default else param.default
+    default = f'"{default}"' if isinstance(default, str) else default
+    return f"[{param.name}={f'{default}'}]"
 
 def is_check_in_command(command: Command, check: str) -> bool:
     return check in map(lambda check: check.__qualname__.split(".")[0], command.checks)

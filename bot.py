@@ -48,7 +48,7 @@ async def get_prefix(bot: CodenamesBot, message: Message) -> Iterable[str]:
     return when_mentioned_or(*res)(bot, message)
 
 
-async def main() -> None:
+def main() -> None:
     bot = CodenamesBot(
         command_prefix=get_prefix,
         help_command=None,
@@ -58,4 +58,4 @@ async def main() -> None:
     )
 
     token = os.environ.get("TOKEN")
-    await bot.start(token)
+    bot.run(token)
