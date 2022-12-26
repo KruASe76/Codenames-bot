@@ -53,9 +53,8 @@ class GameCog(Cog, name="game"):
                     (ctx.author in team2 and team_number == 2):
                 await send_error(ctx, loc.errors.title, loc.errors.already_in_team)
                 return
-            
-            # Changes are not visible from this function running
-            if ctx.author in no_team:  # Getting relevant player list again
+
+            if ctx.author in no_team:
                 no_team.remove(ctx.author)
             elif ctx.author in team1:
                 team1.remove(ctx.author)
@@ -124,7 +123,7 @@ class GameCog(Cog, name="game"):
             await ctx.message.add_reaction("✅")
             await ctx.message.delete(delay=3)
 
-    @hybrid_command(name="no_team", aliases=("ps", "p"), description=locale_str("no_team"))
+    @hybrid_command(name="players", aliases=("ps", "p"), description=locale_str("players"))
     @guild_only()
     async def show_players(self, ctx: Context) -> None:
         final = ctx.command == self.start
@@ -432,7 +431,7 @@ class GameCog(Cog, name="game"):
                 color=Colors.red if current_color == loc.game.red else Colors.blue
             ))
             while word_count >= 0:
-                # >= because of the rule that no_team can open one more word than their captain supposed them to
+                # >= because of the rule that the team can open one more word than their captain intended
                 move_msg = await self.bot.wait_for(
                     "message",
                     check=lambda msg: msg.channel == ctx.channel and
