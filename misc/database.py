@@ -1,7 +1,7 @@
-from typing import Iterable, Any
+from typing import Iterable, Any, Self
 
 import aiosqlite
-from discord import User
+from discord import User, Interaction
 from discord.ext.commands import Context
 
 from misc.messages import messages, Localization
@@ -9,19 +9,28 @@ from misc.constants import Paths
 
 
 class Database:
-    _instance = None
+    _instance: Self = None
     _db: aiosqlite.Connection = None
 
     def __new__(cls, *args, **kwargs):
+        """
+        Access the :class:`Database` singleton.
+
+        **WARNING**: ``await Database.create()`` should be called once previously
+
+        :return: Database object
+        """
+
         return cls._instance
     
     @classmethod
     async def create(cls) -> None:
         """
-        Creates a connection to the database to make it accessible as a singleton.
+        Creates a :class:`aiosqlite.Connection` to the database to make it accessible as a singleton.
 
         :return: None
         """
+
         db = await aiosqlite.connect(Paths.db)
         
         await db.execute(
@@ -39,13 +48,19 @@ class Database:
         cls._instance = super(Database, cls).__new__(cls)
 
 
-    async def fetch(self, sql: str, parameters: Iterable[Any] = None, *, fetchall: bool = False) -> tuple[Any]:
+    async def fetch(
+        self,
+        sql: str,
+        parameters: Iterable[Any] | None = None,
+        *,
+        fetchall: bool = False
+    ) -> tuple[Any] | None:
         """
-        Helper function that executes the given SQL query and returns the result.
+        Executes the given SQL query and returns the result.
 
         :param sql: SQL query to execute
         :param parameters: Parameters for the SQL query
-        :param fetchall: If the function should return a single row or all rows
+        :param fetchall: Whether the function should return a single row or all rows
         :return: Results as a tuple
         """
 
@@ -53,11 +68,11 @@ class Database:
         res = await cursor.fetchall() if fetchall else await cursor.fetchone()
         await cursor.close()
         
-        return tuple(res)
+        return tuple(res) if res else None
 
-    async def exec_and_commit(self, sql: str, parameters: Iterable[Any] = None) -> None:
+    async def exec_and_commit(self, sql: str, parameters: Iterable[Any] | None = None) -> None:
         """
-        Helper function that executes the given SQL statement with changes to the database and commits them.
+        Executes the given SQL statement with changes to the database and commits them.
 
         :param sql: SQL statement to execute
         :param parameters: Parameters to the sql statement
@@ -68,51 +83,54 @@ class Database:
         await self._db.commit()
 
 
-    async def localization(self, ctx: Context) -> Localization:
+    async def localization(self, ctx: Context | Interaction) -> Localization:
         """
         Determines which language the bot should use.
 
-        :param ctx: Command context to access the guild or user id
+        :param ctx: Context or Interaction object to access the guild or user id
         :return: The localization of the guild or player
         """
+
+        user_id = ctx.author.id if isinstance(ctx, Context) else ctx.user.id
 
         if ctx.guild:
             return messages[(await self.fetch("SELECT localization FROM guilds WHERE id=?", (ctx.guild.id,)))[0]]
         else:
-            return messages[(await self.fetch("SELECT localization FROM players WHERE id=?", (ctx.author.id,)))[0]]
+            return messages[(await self.fetch("SELECT localization FROM players WHERE id=?", (user_id,)))[0]]
 
 
     async def fetch_teams(self, ctx: Context) -> tuple[list[User], list[User], list[User]]:
         """
-        Returns a tuple of three lists of Users (three teams).
+        Returns a tuple of three lists of Users (two teams and Users without team).
+
         The first list contains players without team, the second two contain each team's members.
 
-        :param ctx: Command context to access bot and guild id
+        :param ctx: Context object to access bot and guild id
         :return: A tuple of three teams
         """
 
-        players, team1, team2 = map(
+        no_team, team1, team2 = map(
             lambda result: map(int, result.split()),
             await self.fetch("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
         )
         return (
-            [await ctx.bot.fetch_user(id) for id in players],
+            [await ctx.bot.fetch_user(id) for id in no_team],
             [await ctx.bot.fetch_user(id) for id in team1],
             [await ctx.bot.fetch_user(id) for id in team2]
         )
 
-    async def save_teams(self, ctx: Context, players: list[User], team1: list[User], team2: list[User]) -> None:
+    async def save_teams(self, ctx: Context, no_team: list[User], team1: list[User], team2: list[User]) -> None:
         """
         Saves the given teams to the database.
 
-        :param ctx: Command context to access guild id
-        :param players: Players without team
+        :param ctx: Context object to access guild id
+        :param no_team: Players without team
         :param team1: Members of the first team
         :param team2: Members of the second team
         :return: None
         """
 
-        players_id = map(lambda player: str(player.id), players)
+        players_id = map(lambda player: str(player.id), no_team)
         team1_id = map(lambda player: str(player.id), team1)
         team2_id = map(lambda player: str(player.id), team2)
         await self.exec_and_commit(

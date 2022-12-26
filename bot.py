@@ -4,29 +4,29 @@ from typing import Iterable
 from discord import Intents, Message
 from discord.ext.commands import Bot, when_mentioned_or
 
-from handlers.commands import add_commands
-from handlers.events import add_events
-from handlers.help import add_help
-from misc.constants import ADMINS
+from handlers.translator import CodenamesTranslator
 from misc.database import Database
+from misc.constants import ADMINS
 
 
 class CodenamesBot(Bot):
     db: Database = None
 
-    @classmethod
-    def custom_intents(cls) -> Intents:
+    @staticmethod
+    def custom_intents() -> Intents:
         intents = Intents.default()
-        intents.message_content = True
+        intents.message_content = True  # to process moves
+        intents.members = True  # to be able to wait_for() reactions in DMs
         return intents
 
     async def setup_hook(self) -> None:
         await Database.create()
         self.db = Database()
 
-        await add_events(self)
-        await add_commands(self)
-        await add_help(self)
+        await self.tree.set_translator(CodenamesTranslator())
+
+        for filename in filter(lambda fn: "cog" in fn, os.listdir("handlers")):
+            await self.load_extension(f"handlers.{filename[:-3]}")  # removing ".py" at the end of the filename
 
 
 async def get_prefix(bot: CodenamesBot, message: Message) -> Iterable[str]:

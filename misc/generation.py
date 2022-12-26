@@ -14,6 +14,20 @@ def field(
     opened_words: Iterable[str], order: Sequence[str],
     guild_id: int
 ) -> None:
+    """
+    The field function creates and saves captain and player fields as images from the given game word lists.
+
+    :param team1_words:Iterable[str]: Fill the red field
+    :param team2_words:Iterable[str]: Pass the words of team 2 to field() function
+    :param endgame_word:str: Determine whether the game has ended
+    :param no_team_words:Iterable[str]: Prevent the same word from being used twice in a game
+    :param opened_words:Iterable[str]: Prevent the same word from being used twice in a game
+    :param order:Sequence[str]: Place the words in a grid
+    :param guild_id:int: Prevent conflicts with other games
+    :return: Nothing because it only creates images
+    :doc-author: Trelent
+    """
+
     img = Image.new("RGB", (FieldSizing.width, FieldSizing.height), (255, 255, 255))
     draw = ImageDraw.Draw(img)
 
@@ -193,6 +207,14 @@ def field(
 
 
 def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple[str]]:
+    """
+    Returns game words randomly picked from the given dictionary
+
+    :param lang: Dictionary language
+    :param dict_name: Dictionary name
+    :return: Game words: red (tuple), blue (tuple), endgame (str), no team (tuple)
+    """
+
     with open(Paths.dictionary(lang, dict_name), "r", encoding="utf-8") as dictionary:
         all_words = dictionary.read().lower().replace("ё", "е").split("\n")
     words: set[str] = set(random.sample(all_words, 25))

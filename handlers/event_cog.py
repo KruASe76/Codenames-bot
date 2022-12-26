@@ -1,16 +1,16 @@
 from discord import Message, Guild, Activity, ActivityType
 from discord.ext.commands import (
-    Bot, Context, Command, Cog, CommandNotFound, BadArgument, MemberNotFound, MissingPermissions, NoPrivateMessage
+    Context, Command, Cog,
+    CommandNotFound, BadArgument, MemberNotFound, NoPrivateMessage, MissingPermissions, NotOwner
 )
 
-from misc.database import Database
+from bot import CodenamesBot
 from misc.util import send_error
 
 
 class EventCog(Cog, name="events"):
-    def __init__(self, bot: Bot) -> None:
+    def __init__(self, bot: CodenamesBot) -> None:
         self.bot = bot
-        self.db = Database()
 
     @Cog.listener()
     async def on_ready(self) -> None:
@@ -26,18 +26,18 @@ class EventCog(Cog, name="events"):
     @Cog.listener()
     async def on_command_error(self, ctx: Context, error: Exception) -> None:
         if isinstance(error, (CommandNotFound, BadArgument, MemberNotFound)):
-            # MemberNotFound raises in "stats" if invalid member was given
+            # MemberNotFound is raised in "stats" if invalid member was given
             await ctx.message.add_reaction("❔")
             await ctx.message.delete(delay=3)
             return
 
-        loc = await self.db.localization(ctx)
+        loc = await self.bot.db.localization(ctx)
 
         if isinstance(error, NoPrivateMessage):
             await send_error(ctx, loc.errors.title, loc.errors.guild_only)
             return
 
-        if isinstance(error, MissingPermissions):
+        if isinstance(error, (MissingPermissions, NotOwner)):
             await send_error(ctx, loc.errors.title, loc.errors.no_permission)
             return
 
@@ -45,12 +45,12 @@ class EventCog(Cog, name="events"):
 
     @Cog.listener()
     async def on_guild_join(self, guild: Guild) -> None:
-        await self.db.exec_and_commit("INSERT INTO guilds VALUES (?,?,?,?,?,?)", (guild.id, "", "en", "", "", ""))
+        await self.bot.db.exec_and_commit("INSERT INTO guilds VALUES (?,?,?,?,?,?)", (guild.id, "", "en", "", "", ""))
 
     @Cog.listener()
     async def on_guild_remove(self, guild: Guild) -> None:
-        await self.db.exec_and_commit("DELETE FROM guilds WHERE id=?", (guild.id,))
+        await self.bot.db.exec_and_commit("DELETE FROM guilds WHERE id=?", (guild.id,))
 
 
-async def add_events(bot: Bot) -> None:
+async def setup(bot: CodenamesBot) -> None:
     await bot.add_cog(EventCog(bot))

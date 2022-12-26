@@ -29,7 +29,6 @@ class PlayersCommand:
 @dataclass  # noqa: E302
 class StartCommand:
     lang_selection_title: str
-    lang_selection_desc: str
     dict_selection_title: str
     dict_selection_desc: str
     dict_selected: str
@@ -49,6 +48,7 @@ class StatsCommand:
     games_won: str
     winrate: str
     note: str
+    egg_game_master_desc: str
 
 @dataclass  # noqa: E302
 class PrefixCommand:
@@ -61,7 +61,7 @@ class PrefixCommand:
 class LanguageCommand:
     title: str
     desc_current: str
-    desc_new: str
+    desc_set: str
     desc_aborted: str
 
 @dataclass  # noqa: E302
@@ -222,11 +222,20 @@ messages = {
             game_continued_desc="Most players voted against game stopping"
         ),
         help={
+            "help": HelpAndBrief(
+                help="Shows help for the given command if provided, global help otherwise"
+            ),
+            "help_command_param": HelpAndBrief(
+                help="The command to show detailed help for"
+            ),
             "register": HelpAndBrief(
-                help="Register for the game.\nIf you will not provide a team it will be picked randomly when the game "
+                help="Register for the game\nIf you will not provide a team it will be picked randomly when the game "
                      "starts.\nTo change the team call the command again with new number; to reset team, do not input "
                      "any number.",
                 brief="Register for the game"
+            ),
+            "register_team_number_param": HelpAndBrief(
+                help="Number of the team to join: 1 or 2"
             ),
             "leave": HelpAndBrief(
                 help="Cancel registration for the game"
@@ -238,15 +247,24 @@ messages = {
                 help="Show registered players"
             ),
             "start": HelpAndBrief(
-                help="Start the game.\nIf there are players without a team they will be evenly distributed.",
+                help="Start the game\nIf there are players without a team they will be evenly distributed.",
                 brief="Start the game"
             ),
             "stats": HelpAndBrief(
                 help="Show player's statistics"
             ),
+            "stats_member_param": HelpAndBrief(
+                help="Server member whose statistics will be displayed"
+            ),
+            "stats_show_param": HelpAndBrief(
+                help="Whether to show the message to everyone"
+            ),
             "prefix": HelpAndBrief(
-                help="Change the bot's prefix.\nTo set it to default (`cdn`) do not provide any.",
-                brief="Change the bot's prefix, empty prefix -> default"
+                help="Change the text command prefix\nTo set it to default (**`cdn`**) do not provide any.",
+                brief="Change the text command prefix, empty prefix - default"
+            ),
+            "prefix_new_prefix_param": HelpAndBrief(
+                help="New text command prefix"
             ),
             "language": HelpAndBrief(
                 help="Change the language of the bot's messages (**EN**/**RU**)"
@@ -288,7 +306,6 @@ messages = {
             ),
             start=StartCommand(
                 lang_selection_title="Select game language",
-                lang_selection_desc="**en** - English\n**ru** - Russian\n\nType the choice in response message",
                 dict_selection_title="Select dictionary",
                 dict_selection_desc="You have 15 seconds to choose",
                 dict_selected="Dictionary selected",
@@ -306,19 +323,20 @@ messages = {
                 games_played="Games played",
                 games_won="Games won",
                 winrate="Winrate",
-                note="Codenames is a **team game**, so the winrate statistics **do not** exactly reflect player's skill"
+                note="Codenames is a **team game**, so the winrate statistics **do not** exactly reflect player's "
+                     "skill",
+                egg_game_master_desc="Best game master: **100%**"
             ),
             prefix=PrefixCommand(
                 prefix_changed_title="Prefix changed",
-                prefix_changed_desc="{}\nDefault one **`cdn`** and bot ping are still valid",
+                prefix_changed_desc="{}\nSlash-commands, default one **`cdn`** and bot ping are still valid",
                 new_prefix="New prefix:\n**`{}`**\n",
                 prefix_deleted="Custom prefix deleted"
             ),
             language=LanguageCommand(
                 title="Language settings",
-                desc_current="**Current language: {} {}**\n\nSelect new language using reactions\n\n"
-                             "_You have 15 seconds_",
-                desc_new="**New language: {} {}**",
+                desc_current="**Current language: {} {}**\n\n_Select new language:_\n\n",
+                desc_set="**Language is set to {} {}**",
                 desc_aborted="Aborted"
             )
         ),
@@ -388,11 +406,20 @@ messages = {
             game_continued_desc="Большинство игроков проголосовало против остановки игры"
         ),
         help={
+            "help": HelpAndBrief(
+                help="Показывает описание данной команды, если она введена, общее описание в противном случае"
+            ),
+            "help_command_param": HelpAndBrief(
+                help="Команда, для которой будет выведено подробное описание"
+            ),
             "register": HelpAndBrief(
-                help="Зарегистрироваться на игру.\nЕсли не указать команду, она будет выбрана случайно перед началом "
+                help="Зарегистрироваться на игру\nЕсли не указать команду, она будет выбрана случайно перед началом "
                      "игры.\nЧтобы поменять команду, нужно вызвать команду еще раз, указав другой номер; чтобы "
                      "сбросить выбор команды, номер указывать не нужно.",
                 brief="Зарегистрироваться на игру"
+            ),
+            "register_team_number_param": HelpAndBrief(
+                help="Номер команды для вступления: 1 или 2"
             ),
             "leave": HelpAndBrief(
                 help="Отменить регистрацию на игру"
@@ -404,15 +431,25 @@ messages = {
                 help="Показать зарегистрированных игроков"
             ),
             "start": HelpAndBrief(
-                help="Начать игру.\nЕсли есть игроки без команды, они будут равномерно распределены.",
+                help="Начать игру\nЕсли есть игроки без команды, они будут равномерно распределены.",
                 brief="Начать игру"
             ),
             "stats": HelpAndBrief(
                 help="Показать статистику игрока"
             ),
+            "stats_member_param": HelpAndBrief(
+                help="Участник сервера, чья статистика будет выведена"
+            ),
+            "stats_show_param": HelpAndBrief(
+                help="Будет ли сообщение видно всем"
+            ),
             "prefix": HelpAndBrief(
-                help="Изменить префикс бота.\nЧтобы сбросить до префикса по умолчанию, новый указывать не нужно.",
-                brief="Изменить префикс бота, пустой префикс -> по умолчанию"
+                help="Изменить префикс для текстовых команд\nЧтобы сбросить до префикса по умолчанию (**`cdn`**), "
+                     "новый указывать не нужно.",
+                brief="Изменить префикс для текстовых команд, пустой префикс - по умолчанию"
+            ),
+            "prefix_new_prefix_param": HelpAndBrief(
+                help="Новый префикс для текстовых команд"
             ),
             "language": HelpAndBrief(
                 help="Изменить язык сообщений бота (**РУС**/**АНГ**)"
@@ -454,7 +491,6 @@ messages = {
             ),
             start=StartCommand(
                 lang_selection_title="Выберите язык игры",
-                lang_selection_desc="**ru** - Русский\n**en** - Английский\n\nНапишите свой выбор в ответном сообщении",
                 dict_selection_title="Выберите словарь",
                 dict_selection_desc="На решение дается 15 секунд",
                 dict_selected="Словарь выбран",
@@ -473,19 +509,20 @@ messages = {
                 games_won="Победы",
                 winrate="Винрейт",
                 note="Codenames - **командная игра**, поэтому статистика побед игрока **не может** точно отражать его "
-                     "мастерство"
+                     "мастерство",
+                egg_game_master_desc="Лучший ведущий: **100%**"
             ),
             prefix=PrefixCommand(
                 prefix_changed_title="Префикс изменен",
-                prefix_changed_desc="{}\nУстановленный по умолчанию **`cdn`** и пинг бота все также работают",
+                prefix_changed_desc="{}\nСлеш-команды, "
+                                    "установленный по умолчанию **`cdn`** и пинг бота все также работают",
                 new_prefix="Новый префикс:\n**`{}`**\n",
                 prefix_deleted="Префикс сервера сброшен"
             ),
             language=LanguageCommand(
                 title="Настройки языка",
-                desc_current="**Установленный язык: {} {}**\n\nВыберите новый язык посредством реакций\n\n"
-                             "_Для выбора дается 15 секунд_",
-                desc_new="**Новый язык: {} {}**",
+                desc_current="**Установленный язык: {} {}**\n\n_Выберите новый язык:_\n\n",
+                desc_set="**Язык установлен на {} {}**",
                 desc_aborted="Отменено"
             )
         ),

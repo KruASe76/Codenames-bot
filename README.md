@@ -1,6 +1,6 @@
 # Codenames-bot
 
-[![Invite to server](https://img.shields.io/badge/INVITE%20TO%20SERVER-555555?style=for-the-badge&logo=discord&logoWidth=32&logoColor=ffffff&labelColor=5865f2)](https://discord.com/api/oauth2/authorize?client_id=841776986246348851&permissions=108608&scope=bot)
+[![Invite to server](https://img.shields.io/badge/INVITE%20TO%20SERVER-555555?style=for-the-badge&logo=discord&logoWidth=32&logoColor=ffffff&labelColor=5865f2)](https://discord.com/api/oauth2/authorize?client_id=841776986246348851&permissions=274878015552&scope=bot%20applications.commands)
 
 
 ## Features
@@ -28,10 +28,9 @@
 
 ## Used libraries
 
-- [discord.py (v1.7.3)](https://pypi.org/project/discord.py/1.7.3/) as Discord API
+- [discord.py (v2)](https://pypi.org/project/discord.py/) as Discord API wrapper
 - [Pillow (PIL)](https://pypi.org/project/Pillow/) for image generation
 - [aiosqlite](https://pypi.org/project/aiosqlite/) for asynchronous database handling
-- [python-dotenv](https://pypi.org/project/python-dotenv/) for loading environment variables
 
 
 ## Original game (reference)

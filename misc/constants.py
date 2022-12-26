@@ -66,8 +66,8 @@ class Paths:
     def pl_img(cls, id: int) -> Path:
         return Path(cls.img_dir, f"{id}-player.png")
 
-    @classmethod
-    def dictionary(cls, language: str, name: str) -> Path:
+    @staticmethod
+    def dictionary(language: str, name: str) -> Path:
         return Path("resources", "dictionaries", language, f"{name}.txt")
 
 

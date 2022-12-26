@@ -3,126 +3,138 @@ import os
 import random
 import re
 import shutil
-from itertools import chain
 
-from discord import Message, Member, Embed, File
-from discord.ext.commands import Bot, Context, Cog, command, guild_only
+from discord import Member, Embed, File
+from discord.ext.commands import Context, Cog, hybrid_command, guild_only
+from discord.app_commands import describe, locale_str
 
-import misc.generation as gen
+from bot import CodenamesBot
 from handlers.checks import is_moderator
-from misc import util
+from misc.util import send_error, send_fields, most_count_reaction_emojis, pros_and_cons
+import misc.generation as gen
 from misc.constants import (
-    EMPTY, ALPHABET, REACTION_ALPHABET, REACTION_R, REACTION_NUMBERS, dictionaries, flags, flags_rev, Paths, Colors
+    EMPTY, ALPHABET, REACTION_ALPHABET, REACTION_R, REACTION_NUMBERS, flags_rev, dictionaries, Paths, Colors
 )
-from misc.database import Database
 
 
 class GameCog(Cog, name="game"):
-    def __init__(self, bot: Bot) -> None:
+    def __init__(self, bot: CodenamesBot) -> None:
         self.bot = bot
-        self.db = Database()
 
-    @command(aliases=("ready", "reg", "r"))
+    @hybrid_command(aliases=("ready", "reg", "r"), description=locale_str("register"))
+    @describe(team_number=locale_str("register_team_number_param"))
     @guild_only()
     async def register(self, ctx: Context, team_number: int = 0) -> None:
-        loc = await self.db.localization(ctx)
+        loc = await self.bot.db.localization(ctx)
 
-        if team_number == 34:
-            await ctx.reply(
-                embed=Embed(
-                    title=loc.commands.register.egg_r34_title,
-                    description=loc.commands.register.egg_r34_desc,
-                    color=Colors.red
-                ),
-                delete_after=7
+        if team_number == 34:  # easter egg
+            r34_embed = Embed(
+                title=loc.commands.register.egg_r34_title,
+                description=loc.commands.register.egg_r34_desc,
+                color=Colors.red
             )
-            await ctx.message.delete(delay=7)
+
+            if ctx.interaction:
+                await ctx.interaction.response.send_message(embed=r34_embed, ephemeral=True)
+            else:
+                await ctx.reply(embed=r34_embed, delete_after=7)
+                await ctx.message.delete(delay=7)
             return
 
         if team_number not in range(3):
-            await util.send_error(ctx, loc.errors.title, loc.errors.invalid_team)
+            await send_error(ctx, loc.errors.title, loc.errors.invalid_team)
             return
         
-        players, team1, team2 = await self.db.fetch_teams(ctx)
+        no_team, team1, team2 = await self.bot.db.fetch_teams(ctx)
 
-        if ctx.author in chain(players, team1, team2):
-            if (ctx.author in players and team_number == 0) or \
+        if ctx.author in no_team + team1 + team2:
+            if (ctx.author in no_team and team_number == 0) or \
                     (ctx.author in team1 and team_number == 1) or \
                     (ctx.author in team2 and team_number == 2):
-                await util.send_error(ctx, loc.errors.title, loc.errors.already_in_team)
+                await send_error(ctx, loc.errors.title, loc.errors.already_in_team)
                 return
             
-            await self.leave(ctx)  # Removing author from any team, then processing main code
-            
             # Changes are not visible from this function running
-            if ctx.author in players:  # Getting relevant player list again
-                players.remove(ctx.author)
+            if ctx.author in no_team:  # Getting relevant player list again
+                no_team.remove(ctx.author)
             elif ctx.author in team1:
                 team1.remove(ctx.author)
             elif ctx.author in team2:
                 team2.remove(ctx.author)
         
         if team_number == 0:
-            players.append(ctx.author)
+            no_team.append(ctx.author)
         elif team_number == 1:
             team1.append(ctx.author)
         elif team_number == 2:
             team2.append(ctx.author)
 
-        if ctx.author.id not in map(lambda row: row[0], await self.db.fetch("SELECT id FROM players", fetchall=True)):
-            await self.db.exec_and_commit(
+        if ctx.author.id not in map(
+            lambda row: row[0],
+            await self.bot.db.fetch("SELECT id FROM players", fetchall=True)
+        ):
+            await self.bot.db.exec_and_commit(
                 "INSERT INTO players VALUES (?,strftime('%d/%m/%Y','now'),?,?,?,?,?,?)",
                 (ctx.author.id, "", "en", 0, 0, 0, 0)
             )
 
-        await ctx.message.add_reaction("✅")
-        
-        await self.db.save_teams(ctx, players, team1, team2)
+        if ctx.interaction:
+            await ctx.interaction.response.send_message("✅", ephemeral=True)
+        else:
+            await ctx.message.add_reaction("✅")
+            await ctx.message.delete(delay=3)
 
-        await ctx.message.delete(delay=3)
+        await self.bot.db.save_teams(ctx, no_team, team1, team2)
 
-    @command(aliases=("unregister", "unreg", "l"))
+    @hybrid_command(aliases=("unregister", "unreg", "l"), description=locale_str("leave"))
     @guild_only()
     async def leave(self, ctx: Context) -> None:
-        loc = await self.db.localization(ctx)
+        loc = await self.bot.db.localization(ctx)
         
-        players, team1, team2 = await self.db.fetch_teams(ctx)
+        no_team, team1, team2 = await self.bot.db.fetch_teams(ctx)
         
-        if ctx.author not in chain(players, team1, team2):
-            await util.send_error(ctx, loc.errors.title, loc.errors.not_registered)
+        if ctx.author not in no_team + team1 + team2:
+            await send_error(ctx, loc.errors.title, loc.errors.not_registered)
             return
 
-        if ctx.author in players:
-            players.remove(ctx.author)
+        if ctx.author in no_team:
+            no_team.remove(ctx.author)
         elif ctx.author in team1:
             team1.remove(ctx.author)
         elif ctx.author in team2:
             team2.remove(ctx.author)
-        
-        await ctx.message.add_reaction("✅")
 
-        await self.db.save_teams(ctx, players, team1, team2)
+        if ctx.interaction:
+            await ctx.send("✅", ephemeral=True)
+        else:
+            await ctx.message.add_reaction("✅")
+            await ctx.message.delete(delay=3)
 
-        await ctx.message.delete(delay=3)
+        await self.bot.db.save_teams(ctx, no_team, team1, team2)
 
-    @command(aliases=("clr", "cl", "c"))
+    @hybrid_command(aliases=("clr", "cl", "c"), description=locale_str("clear"))
     @guild_only()
     @is_moderator()
     async def clear(self, ctx: Context) -> None:
-        await self.db.save_teams(ctx, [], [], [])
-        
-        await ctx.message.add_reaction("✅")
-        await ctx.message.delete(delay=3)
+        await self.bot.db.save_teams(ctx, [], [], [])
 
-    @command(name="players", aliases=("ps", "p"))
+        if ctx.interaction:
+            await ctx.interaction.response.send_message("✅", ephemeral=True)
+        else:
+            await ctx.message.add_reaction("✅")
+            await ctx.message.delete(delay=3)
+
+    @hybrid_command(name="no_team", aliases=("ps", "p"), description=locale_str("no_team"))
     @guild_only()
-    async def show_players(self, ctx: Context, final: bool = False) -> None:
-        loc = await self.db.localization(ctx)
+    async def show_players(self, ctx: Context) -> None:
+        final = ctx.command == self.start
+
+        loc = await self.bot.db.localization(ctx)
         
         async with ctx.typing():
-            players, team1, team2 = await self.db.fetch_teams(ctx)
+            no_team, team1, team2 = await self.bot.db.fetch_teams(ctx)
 
-            if players or team1 or team2:
+            if no_team or team1 or team2:
                 players_embed = Embed(
                     title=loc.commands.players.final_player_list if final else loc.commands.players.player_list,
                     color=Colors.purple
@@ -133,10 +145,10 @@ class GameCog(Cog, name="game"):
                         name=loc.commands.players.team1,
                         value="\n".join(map(lambda p: p.mention, team1))
                     )
-                if players:
+                if no_team:
                     players_embed.add_field(
                         name=loc.commands.players.no_team,
-                        value="\n".join(map(lambda p: p.mention, players))
+                        value="\n".join(map(lambda p: p.mention, no_team))
                     )
                 if team2:
                     players_embed.add_field(
@@ -144,57 +156,67 @@ class GameCog(Cog, name="game"):
                         value="\n".join(map(lambda p: p.mention, team2))
                     )
 
-                await ctx.reply(embed=players_embed)
+                if ctx.interaction:
+                    await ctx.interaction.followup.send(embed=players_embed)
+                else:
+                    await ctx.reply(embed=players_embed)
             else:
-                await ctx.reply(embed=Embed(
+                nobody_ready_embed = Embed(
                     title=loc.commands.players.player_list,
                     description=loc.commands.players.empty_list,
                     color=Colors.purple
-                ))
+                )
 
-    @command(aliases=("s",))
+                if ctx.interaction:
+                    await ctx.interaction.followup.send(embed=nobody_ready_embed)
+                else:
+                    await ctx.reply(embed=nobody_ready_embed)
+
+    @hybrid_command(aliases=("s",), description=locale_str("start"))
     @guild_only()
     async def start(self, ctx: Context) -> None:
-        loc = await self.db.localization(ctx)
+        loc = await self.bot.db.localization(ctx)
         
-        async with ctx.typing():  # Final player list preparation and show
-            players, team1, team2 = await self.db.fetch_teams(ctx)
+        # Final player list preparation and show
+        no_team, team1, team2 = await self.bot.db.fetch_teams(ctx)
 
-            random.shuffle(players)
-            for member in players:  # Dividing players into two teams randomly
-                if len(team1) <= len(team2):
-                    team1.append(member)
-                else:
-                    team2.append(member)
-            
-            if len(team1) < 2 or len(team2) < 2:
-                await util.send_error(ctx, loc.errors.title, loc.errors.not_enough_players)
-                return
-            
-            if len(team1) > 25 or len(team2) > 25:
-                await util.send_error(ctx, loc.errors.title, loc.errors.too_many_players)
-                return
+        random.shuffle(no_team)
+        for member in no_team:  # Dividing no_team into two teams randomly
+            if len(team1) <= len(team2):
+                team1.append(member)
+            else:
+                team2.append(member)
 
-            await self.db.save_teams(ctx, [], team1, team2)
-            
-            final_show = self.bot.get_command("players")
-            await final_show.__call__(ctx, final=True)
+        if len(team1) < 2 or len(team2) < 2:
+            await send_error(ctx, loc.errors.title, loc.errors.not_enough_players)
+            return
+
+        if len(team1) > 25 or len(team2) > 25:
+            await send_error(ctx, loc.errors.title, loc.errors.too_many_players)
+            return
+
+        await self.bot.db.save_teams(ctx, [], team1, team2)
+
+        await self.show_players(ctx)
 
         await asyncio.sleep(1)
 
         # Dictionary selection
-        await ctx.send(embed=Embed(
+        language_msg = await ctx.send(embed=Embed(
             title=loc.commands.start.lang_selection_title,
-            description=loc.commands.start.lang_selection_desc,
             color=Colors.purple
         ))
-        language = await self.bot.wait_for(
-            "message",
-            check=lambda msg: msg.channel == ctx.channel and
-                              msg.author == ctx.author and
-                              msg.content.lower() in dictionaries.keys()
-        )
-        language = language.content.lower()
+        for flag in flags_rev.keys():
+            await language_msg.add_reaction(flag)
+
+        language: str = flags_rev[
+            (await self.bot.wait_for(
+                "reaction_add",
+                check=lambda reaction, user: reaction.message == language_msg and
+                                             user.id == ctx.author.id and
+                                             reaction.me
+            ))[0].emoji
+        ]
 
         dict_msg_desc = map(lambda num, value: f"**{num}** - {value}", range(1, 10), dictionaries[language].values())
         dict_msg = await ctx.send(embed=Embed(
@@ -206,8 +228,8 @@ class GameCog(Cog, name="game"):
             await dict_msg.add_reaction(r_num)
         await asyncio.sleep(15)
 
-        new_dict_msg = await ctx.channel.fetch_message(dict_msg.id)
-        emojis = await util.most_count_reaction_emojis(new_dict_msg, chain(team1, team2))
+        new_dict_msg = await ctx.fetch_message(dict_msg.id)
+        emojis = await most_count_reaction_emojis(new_dict_msg, team1 + team2)
 
         potential_dicts = map(lambda e: tuple(dictionaries[language].keys())[REACTION_NUMBERS.index(e)], emojis)
         game_dict_name = random.choice(tuple(potential_dicts))
@@ -233,8 +255,8 @@ class GameCog(Cog, name="game"):
         await asyncio.sleep(15)
 
         # Have to get the message object again with reactions in it
-        new_cap_msg = await ctx.channel.fetch_message(cap_msg.id)
-        emojis = await util.most_count_reaction_emojis(new_cap_msg, team1)
+        new_cap_msg = await ctx.fetch_message(cap_msg.id)
+        emojis = await most_count_reaction_emojis(new_cap_msg, team1)
         
         if REACTION_R in emojis:
             team1_cap = random.choice(team1)
@@ -266,8 +288,8 @@ class GameCog(Cog, name="game"):
         await asyncio.sleep(15)
 
         # Have to get the message object again with reactions in it
-        new_cap_msg = await ctx.channel.fetch_message(cap_msg.id)
-        emojis = await util.most_count_reaction_emojis(new_cap_msg, team2)
+        new_cap_msg = await ctx.fetch_message(cap_msg.id)
+        emojis = await most_count_reaction_emojis(new_cap_msg, team2)
         
         if REACTION_R in emojis:
             team2_cap = random.choice(team2)
@@ -365,7 +387,7 @@ class GameCog(Cog, name="game"):
         first_round = True
         while game:
             gen.field(team1_words, team2_words, endgame_word, no_team_words, opened_words, order, ctx.guild.id)
-            await util.send_fields(ctx, current_cap, other_cap)
+            await send_fields(ctx, current_cap, other_cap)
 
             if first_round:
                 shutil.copy(
@@ -410,7 +432,7 @@ class GameCog(Cog, name="game"):
                 color=Colors.red if current_color == loc.game.red else Colors.blue
             ))
             while word_count >= 0:
-                # >= because of the rule that players can open one more word than their captain supposed them to
+                # >= because of the rule that no_team can open one more word than their captain supposed them to
                 move_msg = await self.bot.wait_for(
                     "message",
                     check=lambda msg: msg.channel == ctx.channel and
@@ -429,7 +451,7 @@ class GameCog(Cog, name="game"):
                         color=Colors.purple
                     ))
                     
-                    pros, cons = await util.pros_and_cons(stop_msg, 15, chain(team1, team2))
+                    pros, cons = await pros_and_cons(stop_msg, 15, team1 + team2)
                     if pros > cons:
                         await ctx.send(embed=Embed(
                             title=loc.game.game_stopped_title,
@@ -470,7 +492,7 @@ class GameCog(Cog, name="game"):
                     ))
 
                     if word_count > 0:  # If quitting after this move, field will be sent twice in a row
-                        await util.send_fields(ctx, current_cap, other_cap)
+                        await send_fields(ctx, current_cap, other_cap)
                 elif move in other_words:
                     await move_msg.reply(embed=Embed(
                         title=loc.game.miss_title,
@@ -489,7 +511,7 @@ class GameCog(Cog, name="game"):
                     ))
 
                     if set(other_words) <= set(opened_words):  # If all second_words are opened
-                        await util.send_fields(ctx, current_cap, other_cap)
+                        await send_fields(ctx, current_cap, other_cap)
                         
                         await ctx.send(embed=Embed(
                             title=loc.game.game_over_title,
@@ -502,28 +524,28 @@ class GameCog(Cog, name="game"):
                             description=loc.game.your_team_lost_desc,
                             color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(current_cap.id, ("games", "games_cap"))
+                        await self.bot.db.increase_stats(current_cap.id, ("games", "games_cap"))
                         for player in current_pl:
                             await player.send(embed=Embed(
                                 title=loc.game.your_team_lost_title,
                                 description=loc.game.your_team_lost_desc,
                                 color=Colors.red if other_color == loc.game.red else Colors.blue
                             ))
-                            await self.db.increase_stats(player.id, ("games",))
+                            await self.bot.db.increase_stats(player.id, ("games",))
                         
                         await other_cap.send(embed=Embed(
                             title=loc.game.your_team_won_title,
                             description=loc.game.your_team_won_desc,
                             color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(other_cap.id, ("games", "games_cap", "wins", "wins_cap"))
+                        await self.bot.db.increase_stats(other_cap.id, ("games", "games_cap", "wins", "wins_cap"))
                         for player in other_pl:
                             await player.send(embed=Embed(
                                 title=loc.game.your_team_won_title,
                                 description=loc.game.your_team_won_desc,
                                 color=Colors.red if other_color == loc.game.red else Colors.blue
                             ))
-                            await self.db.increase_stats(player.id, ("games", "wins"))
+                            await self.bot.db.increase_stats(player.id, ("games", "wins"))
 
                         game = False
                         break
@@ -546,7 +568,7 @@ class GameCog(Cog, name="game"):
                         color=Colors.black
                     ))
 
-                    await util.send_fields(ctx, current_cap, other_cap)
+                    await send_fields(ctx, current_cap, other_cap)
                     
                     await ctx.send(embed=Embed(
                         title=loc.game.game_over_title,
@@ -559,28 +581,28 @@ class GameCog(Cog, name="game"):
                         description=loc.game.your_team_lost_desc,
                         color=Colors.red if other_color == loc.game.red else Colors.blue
                     ))
-                    await self.db.increase_stats(current_cap.id, ("games", "games_cap"))
+                    await self.bot.db.increase_stats(current_cap.id, ("games", "games_cap"))
                     for player in current_pl:
                         await player.send(embed=Embed(
                             title=loc.game.your_team_lost_title,
                             description=loc.game.your_team_lost_desc,
                             color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(player.id, ("games",))
+                        await self.bot.db.increase_stats(player.id, ("games",))
                     
                     await other_cap.send(embed=Embed(
                         title=loc.game.your_team_won_title,
                         description=loc.game.your_team_won_desc,
                         color=Colors.red if other_color == loc.game.red else Colors.blue
                     ))
-                    await self.db.increase_stats(other_cap.id, ("games", "games_cap", "wins", "wins_cap"))
+                    await self.bot.db.increase_stats(other_cap.id, ("games", "games_cap", "wins", "wins_cap"))
                     for player in other_pl:
                         await player.send(embed=Embed(
                             title=loc.game.your_team_won_title,
                             description=loc.game.your_team_won_desc,
                             color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(player.id, ("games", "wins"))
+                        await self.bot.db.increase_stats(player.id, ("games", "wins"))
 
                     game = False
                     break
@@ -602,7 +624,7 @@ class GameCog(Cog, name="game"):
                     ))
 
                     if set(current_words) <= set(opened_words):  # If all first_words are opened
-                        await util.send_fields(ctx, current_cap, other_cap)
+                        await send_fields(ctx, current_cap, other_cap)
                         
                         await ctx.send(embed=Embed(
                             title=loc.game.game_over_title,
@@ -615,34 +637,34 @@ class GameCog(Cog, name="game"):
                             description=loc.game.your_team_won_desc,
                             color=Colors.red if current_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(current_cap.id, ("games", "games_cap", "wins", "wins_cap"))
+                        await self.bot.db.increase_stats(current_cap.id, ("games", "games_cap", "wins", "wins_cap"))
                         for player in current_pl:
                             await player.send(embed=Embed(
                                 title=loc.game.your_team_won_title,
                                 description=loc.game.your_team_won_desc,
                                 color=Colors.red if current_color == loc.game.red else Colors.blue
                             ))
-                            await self.db.increase_stats(player.id, ("games", "wins"))
+                            await self.bot.db.increase_stats(player.id, ("games", "wins"))
                         
                         await other_cap.send(embed=Embed(
                             title=loc.game.your_team_lost_title,
                             description=loc.game.your_team_lost_desc,
                             color=Colors.red if current_color == loc.game.red else Colors.blue
                         ))
-                        await self.db.increase_stats(other_cap.id, ("games", "games_cap"))
+                        await self.bot.db.increase_stats(other_cap.id, ("games", "games_cap"))
                         for player in other_pl:
                             await player.send(embed=Embed(
                                 title=loc.game.your_team_lost_title,
                                 description=loc.game.your_team_lost_desc,
                                 color=Colors.red if current_color == loc.game.red else Colors.blue
                             ))
-                            await self.db.increase_stats(player.id, ("games",))
+                            await self.bot.db.increase_stats(player.id, ("games",))
 
                         game = False
                         break
 
                     if word_count > 0:  # If quitting after this move, field will be sent twice in a row
-                        await util.send_fields(ctx, current_cap, other_cap)
+                        await send_fields(ctx, current_cap, other_cap)
 
                 word_count -= 1
             
@@ -655,25 +677,40 @@ class GameCog(Cog, name="game"):
         initial_cap_field = File(Paths.cap_img_init(ctx.guild.id), filename="initial_captain_field.png")
         await ctx.send(file=initial_cap_field)
 
-        await self.db.save_teams(ctx, [], [], [])
+        await self.bot.db.save_teams(ctx, [], [], [])
         
         os.remove(Paths.pl_img(ctx.guild.id))
         os.remove(Paths.cap_img(ctx.guild.id))
         os.remove(Paths.cap_img_init(ctx.guild.id))
 
-    @command(aliases=("stat", "ss", "st"))
-    async def stats(self, ctx: Context, member: Member | None = None) -> None:
+    @hybrid_command(aliases=("stat", "ss", "st"), description=locale_str("stats"))
+    @describe(member=locale_str("stats_member_param"), show=locale_str("stats_show_param"))
+    async def stats(self, ctx: Context, member: Member | None = None, show: bool = False) -> None:
         member = member or ctx.author
         name = f"**{member.display_name}**"
         
-        loc = await self.db.localization(ctx)
+        loc = await self.bot.db.localization(ctx)
+
+        if member == self.bot.user:
+            game_master_embed = Embed(
+                title=loc.commands.stats.smbs_stats.format(name),
+                description=loc.commands.stats.egg_game_master_desc,
+                color=Colors.purple
+            )
+
+            if ctx.interaction:
+                await ctx.interaction.response.send_message(embed=game_master_embed, ephemeral=not show)
+            else:
+                await ctx.reply(embed=game_master_embed)
+
+            return
         
-        info = await self.db.fetch(
+        info = await self.bot.db.fetch(
             "SELECT date, games, games_cap, wins, wins_cap FROM players WHERE id=?",
             (member.id,)
         )
         if not info:
-            await util.send_error(ctx, loc.errors.title, loc.errors.never_played.format(name))
+            await send_error(ctx, loc.errors.title, loc.errors.never_played.format(name))
             return
 
         # noinspection PyTupleAssignmentBalance
@@ -712,92 +749,11 @@ class GameCog(Cog, name="game"):
         )
         stats_embed.set_thumbnail(url=member.display_avatar)
 
-        await ctx.reply(embed=stats_embed)
-
-
-class SettingCog(Cog, name="settings"):
-    def __init__(self, bot: Bot) -> None:
-        self.bot = bot
-        self.db = Database()
-
-    @command(aliases=("pre",))
-    @is_moderator()
-    async def prefix(self, ctx: Context, new_prefix: str = "cdn") -> None:
-        new_prefix = "" if new_prefix == "cdn" else new_prefix
-
-        loc = await self.db.localization(ctx)
-        
-        if ctx.guild:
-            await self.db.exec_and_commit("UPDATE guilds SET prefix=? WHERE id=?", (new_prefix, ctx.guild.id))
+        if ctx.interaction:
+            await ctx.interaction.response.send_message(embed=stats_embed, ephemeral=not show)
         else:
-            await self.db.exec_and_commit("UPDATE players SET prefix=? WHERE id=?", (new_prefix, ctx.author.id))
-
-        await ctx.send(embed=Embed(
-            title=loc.commands.prefix.prefix_changed_title,
-            description=loc.commands.prefix.prefix_changed_desc.format(
-                loc.commands.prefix.new_prefix.format(new_prefix) if new_prefix else loc.commands.prefix.prefix_deleted
-            ),
-            color=Colors.purple
-        ))
-    
-    @command(aliases=("lang",))
-    @is_moderator()
-    async def language(self, ctx: Context) -> None:
-        loc = await self.db.localization(ctx)
-
-        if ctx.guild:
-            current_loc = (await self.db.fetch("SELECT localization FROM guilds WHERE id=?", (ctx.guild.id,)))[0]
-        else:
-            current_loc = (await self.db.fetch("SELECT localization FROM players WHERE id=?", (ctx.author.id,)))[0]
-        
-        msg: Message = await ctx.reply(embed=Embed(
-            title=loc.commands.language.title,
-            description=loc.commands.language.desc_current.format(current_loc.upper(), flags[current_loc]),
-            color=Colors.purple
-        ))
-        for flag in flags.values():
-            await msg.add_reaction(flag)
-        
-        try:
-            new_loc: str = flags_rev[
-                (await self.bot.wait_for(
-                    "reaction_add",
-                    timeout=15.0,
-                    check=lambda reaction, user: reaction.message == msg and user.id == ctx.author.id and reaction.me
-                ))[0].emoji
-            ]
-        except asyncio.TimeoutError:
-            await msg.edit(embed=Embed(
-                title=loc.commands.language.title,
-                description=loc.commands.language.desc_aborted,
-                color=Colors.red
-            ))
-            await msg.delete(delay=7)
-            await ctx.message.delete(delay=7)
-            return
-        
-        if ctx.guild:
-            await self.db.exec_and_commit(
-                "UPDATE guilds SET localization=? WHERE id=?",
-                (new_loc, ctx.guild.id)
-            )
-        else:
-            await self.db.exec_and_commit(
-                "UPDATE players SET localization=? WHERE id=?",
-                (new_loc, ctx.author.id)
-            )
-
-        loc = await self.db.localization(ctx)
-        
-        await msg.edit(embed=Embed(
-            title=loc.commands.language.title,
-            description=loc.commands.language.desc_new.format(new_loc.upper(), flags[new_loc]),
-            color=Colors.purple
-        ))
-        if ctx.guild:
-            await msg.clear_reactions()
+            await ctx.reply(embed=stats_embed)
 
 
-async def add_commands(bot: Bot) -> None:
+async def setup(bot: CodenamesBot) -> None:
     await bot.add_cog(GameCog(bot))
-    await bot.add_cog(SettingCog(bot))

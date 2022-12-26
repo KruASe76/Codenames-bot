@@ -1,13 +1,12 @@
-from discord.ext.commands import check, Context, MissingPermissions
+from discord import Interaction
+from discord.ext.commands import check, Context, MissingPermissions, is_owner
 
 
 def is_moderator():
-    def predicate(ctx: Context) -> bool:
-        if not (
-            ctx.channel.permissions_for(ctx.message.author).manage_messages or ctx.bot.is_owner(ctx.message.author)
-        ):
-            raise MissingPermissions(["manage_messages"])
-        
-        return True
-    
+    async def predicate(ctx: Context | Interaction) -> bool:
+        if ctx.channel.permissions_for(ctx.author).manage_messages or await is_owner().predicate(ctx):
+            return True
+
+        raise MissingPermissions(["manage_messages"])
+
     return check(predicate)
