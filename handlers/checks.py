@@ -1,12 +1,19 @@
 from discord import Interaction
-from discord.ext.commands import check, Context, MissingPermissions, is_owner
+from discord.ext.commands import check, Context, MissingPermissions
+
+from misc.constants import ADMINS
 
 
 def is_moderator():
     async def predicate(ctx: Context | Interaction) -> bool:
-        if ctx.channel.permissions_for(ctx.author).manage_messages or await is_owner().predicate(ctx):
+        user = ctx.author if isinstance(ctx, Context) else ctx.user
+
+        if ctx.channel.permissions_for(user).manage_messages or user in ADMINS:
             return True
 
-        raise MissingPermissions(["manage_messages"])
+        if isinstance(ctx, Interaction):
+            return False
+        else:
+            raise MissingPermissions(["manage_messages"])
 
     return check(predicate)

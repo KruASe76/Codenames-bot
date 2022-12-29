@@ -2,80 +2,6 @@ from dataclasses import dataclass
 
 
 @dataclass
-class HelpCommand:
-    command_list: str
-    guild: str
-    moderator: str
-    moderator_shortened: str
-    about_moderator: str
-    note: str
-    hint: str
-    command: str
-
-@dataclass  # noqa: E302
-class RegisterCommand:
-    egg_r34_title: str
-    egg_r34_desc: str
-
-@dataclass  # noqa: E302
-class PlayersCommand:
-    player_list: str
-    final_player_list: str
-    team1: str
-    team2: str
-    no_team: str
-    empty_list: str
-
-@dataclass  # noqa: E302
-class StartCommand:
-    lang_selection_title: str
-    dict_selection_title: str
-    dict_selection_desc: str
-    dict_selected: str
-    cap_selection_title: str
-    cap_selection_desc: str
-    cap_selected_title: str
-    cap_selected_desc: str
-
-@dataclass  # noqa: E302
-class StatsCommand:
-    smbs_stats: str
-    playing_since: str
-    total: str
-    captain: str
-    team: str
-    games_played: str
-    games_won: str
-    winrate: str
-    note: str
-    egg_game_master_desc: str
-
-@dataclass  # noqa: E302
-class PrefixCommand:
-    prefix_changed_title: str
-    prefix_changed_desc: str
-    new_prefix: str
-    prefix_deleted: str
-
-@dataclass  # noqa: E302
-class LanguageCommand:
-    title: str
-    desc_current: str
-    desc_set: str
-    desc_aborted: str
-
-@dataclass  # noqa: E302
-class Commands:
-    help: HelpCommand
-    register: RegisterCommand
-    players: PlayersCommand
-    start: StartCommand
-    stats: StatsCommand
-    prefix: PrefixCommand
-    language: LanguageCommand
-
-
-@dataclass
 class Game:
     red: str
     blue: str
@@ -133,6 +59,89 @@ class Game:
 
 
 @dataclass
+class HelpCommand:
+    command_list: str
+    guild: str
+    moderator: str
+    moderator_shortened: str
+    about_moderator: str
+    note: str
+    hint: str
+    command: str
+
+@dataclass  # noqa: E302
+class GameCommand:
+    registration: str
+    registration_started: str
+    registration_instructions: str
+    registration_over: str
+    registration_cancelled: str
+    team1: str
+    team2: str
+    no_team: str
+    empty_list: str
+
+@dataclass  # noqa: E302
+class StartCommand:
+    lang_selection_title: str
+    dict_selection_title: str
+    dict_selection_desc: str
+    dict_selected: str
+    cap_selection_title: str
+    cap_selection_desc: str
+    cap_selected_title: str
+    cap_selected_desc: str
+
+@dataclass  # noqa: E302
+class StatsCommand:
+    smbs_stats: str
+    playing_since: str
+    total: str
+    captain: str
+    team: str
+    games_played: str
+    games_won: str
+    winrate: str
+    note: str
+    egg_game_master_desc: str
+
+@dataclass  # noqa: E302
+class PrefixCommand:
+    prefix_changed_title: str
+    prefix_changed_desc: str
+    new_prefix: str
+    prefix_deleted: str
+
+@dataclass  # noqa: E302
+class LanguageCommand:
+    title: str
+    desc_current: str
+    desc_set: str
+    desc_aborted: str
+
+@dataclass  # noqa: E302
+class Commands:
+    help: HelpCommand
+    game: GameCommand
+    start: StartCommand
+    stats: StatsCommand
+    prefix: PrefixCommand
+    language: LanguageCommand
+
+
+@dataclass
+class UI:
+    alert_title: str
+    alert_desc: str
+    confirm: str
+    cancel: str
+    random: str
+    leave: str
+    start_game: str
+    cancel_reg: str
+
+
+@dataclass
 class HelpAndBrief:
     help: str
     brief: str = None
@@ -151,11 +160,11 @@ class CogName:
 class Errors:
     title: str
     no_permission: str
+    no_permission_command: str
+    not_a_mod: str
+    not_registered: str
     guild_only: str
     invalid_command: str
-    already_in_team: str
-    invalid_team: str
-    not_registered: str
     not_enough_players: str
     too_many_players: str
     never_played: str
@@ -167,6 +176,7 @@ class Localization:
     help: dict[str, HelpAndBrief]
     cogs: dict[str, CogName]
     commands: Commands
+    ui: UI
     errors: Errors
 
 
@@ -228,27 +238,8 @@ messages = {
             "help_command_param": HelpAndBrief(
                 help="The command to show detailed help for"
             ),
-            "register": HelpAndBrief(
-                help="Register for the game\nIf you will not provide a team it will be picked randomly when the game "
-                     "starts.\nTo change the team call the command again with new number; to reset team, do not input "
-                     "any number.",
-                brief="Register for the game"
-            ),
-            "register_team_number_param": HelpAndBrief(
-                help="Number of the team to join: 1 or 2"
-            ),
-            "leave": HelpAndBrief(
-                help="Cancel registration for the game"
-            ),
-            "clear": HelpAndBrief(
-                help="Clear the list of registered players"
-            ),
-            "players": HelpAndBrief(
-                help="Show registered players"
-            ),
-            "start": HelpAndBrief(
-                help="Start the game\nIf there are players without a team they will be evenly distributed.",
-                brief="Start the game"
+            "game": HelpAndBrief(
+                help="Start registration for a new game"
             ),
             "stats": HelpAndBrief(
                 help="Show player's statistics"
@@ -292,13 +283,12 @@ messages = {
                 hint="Learn a more detailed description of the command:",
                 command="command"
             ),
-            register=RegisterCommand(
-                egg_r34_title="No no no no no",
-                egg_r34_desc="We don't do that here :)"
-            ),
-            players=PlayersCommand(
-                player_list="Player list",
-                final_player_list="Final player list",
+            game=GameCommand(
+                registration="Registration",
+                registration_started="Registration for a new game has started!",
+                registration_instructions="Register by clicking one of the buttons in the first row",
+                registration_over="Registration is over",
+                registration_cancelled="Registration cancelled",
                 team1="Team 1",
                 team2="Team 2",
                 no_team="No team",
@@ -340,15 +330,24 @@ messages = {
                 desc_aborted="Aborted"
             )
         ),
+        ui=UI(
+            alert_title="Alert",
+            alert_desc="Action confirmation: **{}**",
+            confirm="Confirm",
+            cancel="Cancel",
+            random="Random team",
+            leave="Leave",
+            start_game="Start the game",
+            cancel_reg="Cancel the registration"
+        ),
         errors=Errors(
             title="Error",
-            no_permission="Not enough permissions to call this command",
+            no_permission="**No permission**: {}",
+            no_permission_command="Not enough permissions to call this command",
+            not_a_mod="Not a moderator (manage messages permission)",
+            not_registered="Not registered for the game",
             guild_only="This command is server-only",
             invalid_command="Invalid command",
-            already_in_team="You are already in that team",
-            invalid_team="**Invalid team number**\nThere are only 2 teams in the game.\nSelect one of them or do not "
-                         "type the number to pick randomly.",
-            not_registered="You are not registered to the game",
             not_enough_players="**Not enough players**\n**Each** team must have **at least 2** players.",
             too_many_players="**Too much players**\n**Each** team must have **no more than 25** players.",
             never_played="{} haven't played Codenames yet"
@@ -412,27 +411,8 @@ messages = {
             "help_command_param": HelpAndBrief(
                 help="Команда, для которой будет выведено подробное описание"
             ),
-            "register": HelpAndBrief(
-                help="Зарегистрироваться на игру\nЕсли не указать команду, она будет выбрана случайно перед началом "
-                     "игры.\nЧтобы поменять команду, нужно вызвать команду еще раз, указав другой номер; чтобы "
-                     "сбросить выбор команды, номер указывать не нужно.",
-                brief="Зарегистрироваться на игру"
-            ),
-            "register_team_number_param": HelpAndBrief(
-                help="Номер команды для вступления: 1 или 2"
-            ),
-            "leave": HelpAndBrief(
-                help="Отменить регистрацию на игру"
-            ),
-            "clear": HelpAndBrief(
-                help="Очистить список зарегистрированных игроков"
-            ),
-            "players": HelpAndBrief(
-                help="Показать зарегистрированных игроков"
-            ),
-            "start": HelpAndBrief(
-                help="Начать игру\nЕсли есть игроки без команды, они будут равномерно распределены.",
-                brief="Начать игру"
+            "game": HelpAndBrief(
+                help="Запустить регистрацию на новую игру"
             ),
             "stats": HelpAndBrief(
                 help="Показать статистику игрока"
@@ -477,13 +457,12 @@ messages = {
                 hint="Получить более подробное описание команды:",
                 command="команда"
             ),
-            register=RegisterCommand(
-                egg_r34_title="Не не не не не",
-                egg_r34_desc="Такого здесь нет :)"
-            ),
-            players=PlayersCommand(
-                player_list="Список игроков",
-                final_player_list="Окончательный список игроков",
+            game=GameCommand(
+                registration="Регистрация",
+                registration_started="Регистрация на новую игру запущена!",
+                registration_instructions="Зарегистрируйтесь, нажав на одну из кнопок первого ряда",
+                registration_over="Регистрация окончена",
+                registration_cancelled="Регистрация отменена",
                 team1="Команда 1",
                 team2="Команда 2",
                 no_team="Без команды",
@@ -526,15 +505,24 @@ messages = {
                 desc_aborted="Отменено"
             )
         ),
+        ui=UI(
+            alert_title="Предупреждение",
+            alert_desc="Подтверждение действия: **{}**",
+            confirm="Подтвердить",
+            cancel="Отмена",
+            random="Случайная команда",
+            leave="Выйти",
+            start_game="Начать игру",
+            cancel_reg="Отменить регистрацию"
+        ),
         errors=Errors(
             title="Ошибка",
-            no_permission="Недостаточно прав для вызова этой команды",
+            no_permission="**Недостаточно прав**: {}",
+            no_permission_command="Недостаточно прав для вызова этой команды",
+            not_a_mod="Вы не являетесь модератором (право управления сообщениями)",
+            not_registered="Вы не зарегистрированы на игру",
             guild_only="Эта команда работает только на сервере",
             invalid_command="Такой команды не существует",
-            already_in_team="Вы уже в этой команде",
-            invalid_team="**Недопустимый номер команды**\nВ игре есть только две команды.\nМожно выбрать одну из них "
-                         "или не выбирать, и тогда она будет случайной.",
-            not_registered="Вы и без того не зарегистрированы",
             not_enough_players="**Недостаточно игроков**\nВ **каждой** команде должно быть **хотя бы 2** игрока.",
             too_many_players="**Слишком много игроков**\nВ **каждой** команде должно быть **не более 25** игроков.",
             never_played="{} еще не играл в Codenames"

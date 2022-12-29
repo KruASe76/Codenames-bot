@@ -1,7 +1,7 @@
 from typing import Iterable, Any, Self
 
 import aiosqlite
-from discord import User, Interaction
+from discord import Interaction
 from discord.ext.commands import Context
 
 from misc.messages import messages, Localization
@@ -35,7 +35,7 @@ class Database:
         
         await db.execute(
             "CREATE TABLE IF NOT EXISTS guilds "
-            "(id int primary key, prefix text, localization text, players text, team1 text, team2 text)"
+            "(id int primary key, prefix text, localization text)"
         )
         await db.execute(
             "CREATE TABLE IF NOT EXISTS players "
@@ -91,53 +91,11 @@ class Database:
         :return: The localization of the guild or player
         """
 
-        user_id = ctx.author.id if isinstance(ctx, Context) else ctx.user.id
-
         if ctx.guild:
             return messages[(await self.fetch("SELECT localization FROM guilds WHERE id=?", (ctx.guild.id,)))[0]]
         else:
+            user_id = ctx.author.id if isinstance(ctx, Context) else ctx.user.id
             return messages[(await self.fetch("SELECT localization FROM players WHERE id=?", (user_id,)))[0]]
-
-
-    async def fetch_teams(self, ctx: Context) -> tuple[list[User], list[User], list[User]]:
-        """
-        Returns a tuple of three lists of Users (two teams and Users without team).
-
-        The first list contains players without team, the second two contain each team's members.
-
-        :param ctx: Context object to access bot and guild id
-        :return: A tuple of three teams
-        """
-
-        no_team, team1, team2 = map(
-            lambda result: map(int, result.split()),
-            await self.fetch("SELECT players, team1, team2 FROM guilds WHERE id=?", (ctx.guild.id,))
-        )
-        return (
-            [await ctx.bot.fetch_user(id) for id in no_team],
-            [await ctx.bot.fetch_user(id) for id in team1],
-            [await ctx.bot.fetch_user(id) for id in team2]
-        )
-
-    async def save_teams(self, ctx: Context, no_team: list[User], team1: list[User], team2: list[User]) -> None:
-        """
-        Saves the given teams to the database.
-
-        :param ctx: Context object to access guild id
-        :param no_team: Players without team
-        :param team1: Members of the first team
-        :param team2: Members of the second team
-        :return: None
-        """
-
-        players_id = map(lambda player: str(player.id), no_team)
-        team1_id = map(lambda player: str(player.id), team1)
-        team2_id = map(lambda player: str(player.id), team2)
-        await self.exec_and_commit(
-            "UPDATE guilds SET players=?, team1=?, team2=? WHERE id=?",
-            (" ".join(players_id), " ".join(team1_id), " ".join(team2_id), ctx.guild.id)
-        )
-
 
     async def increase_stats(self, player_id: int, stats: Iterable[str]) -> None:
         """
@@ -151,7 +109,7 @@ class Database:
         await self.exec_and_commit(
             f"UPDATE players SET {'=?, '.join(stats)}=? WHERE id=?",
             (*map(
-                lambda stat: stat+1,
+                lambda stat: stat + 1,
                 await self.fetch(f"SELECT {', '.join(stats)} FROM players WHERE id=?", (player_id,))
             ), player_id)
         )

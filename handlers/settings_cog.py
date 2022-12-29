@@ -3,8 +3,8 @@ from discord.ext.commands import Context, Cog, hybrid_command
 from discord.app_commands import describe, locale_str
 
 from bot import CodenamesBot
-from handlers.checks import is_moderator
 from handlers.ui import LocalizationView
+from handlers.checks import is_moderator
 from misc.constants import flags, Colors
 
 

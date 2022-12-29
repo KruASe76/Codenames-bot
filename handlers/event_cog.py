@@ -38,14 +38,14 @@ class EventCog(Cog, name="events"):
             return
 
         if isinstance(error, (MissingPermissions, NotOwner)):
-            await send_error(ctx, loc.errors.title, loc.errors.no_permission)
+            await send_error(ctx, loc.errors.title, loc.errors.no_permission_command)
             return
 
         raise error
 
     @Cog.listener()
     async def on_guild_join(self, guild: Guild) -> None:
-        await self.bot.db.exec_and_commit("INSERT INTO guilds VALUES (?,?,?,?,?,?)", (guild.id, "", "en", "", "", ""))
+        await self.bot.db.exec_and_commit("INSERT INTO guilds VALUES (?,?,?)", (guild.id, "", "en"))
 
     @Cog.listener()
     async def on_guild_remove(self, guild: Guild) -> None:

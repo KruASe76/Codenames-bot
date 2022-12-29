@@ -1,10 +1,40 @@
 import asyncio
-from typing import Iterable
+from typing import Iterable, Callable, Any
 
-from discord import Message, User, File, Embed, Reaction, Interaction
+from discord import File, Embed, PartialMessageable, User, Message, Reaction, Interaction, ButtonStyle
 from discord.ext.commands import Parameter, Command, Context
+from discord.ui import View, Button, button
 
+from misc.messages import Localization
 from misc.constants import Paths, Colors
+
+
+# noinspection PyUnusedLocal
+class AlertView(View):
+    # noinspection PyUnresolvedReferences
+    def __init__(self, loc: Localization, callback: Callable, *params: Any) -> None:
+        super().__init__()
+        self.callback = callback
+        self.params = params
+
+        self.children[0].label = loc.ui.cancel
+        self.children[1].label = loc.ui.confirm
+
+    @button(style=ButtonStyle.red)
+    async def cancel_button(self, interaction: Interaction, button: Button) -> None:
+        for button in self.children:
+            button.disabled = True
+
+        await interaction.response.edit_message(view=self)
+
+    @button(style=ButtonStyle.green)
+    async def confirm_button(self, interaction: Interaction, button: Button) -> None:
+        for button in self.children:
+            button.disabled = True
+
+        await interaction.response.edit_message(view=self)
+
+        await self.callback(*self.params)
 
 
 def process_param(name: str, param: Parameter, slash: bool) -> str | None:
@@ -40,7 +70,7 @@ def if_command_has_check(command: Command, check: str) -> bool:
     return check in map(lambda check: check.__qualname__.split(".")[0], command.checks)
 
 
-async def send_error(ctx: Context | Interaction, title: str, description: str) -> None:
+async def send_error(ctx: Context | Interaction | PartialMessageable, title: str, description: str) -> None:
     """
     Sends error message to the given context with given title and description
 
@@ -56,13 +86,39 @@ async def send_error(ctx: Context | Interaction, title: str, description: str) -
         color=Colors.red
     )
 
-    if isinstance(ctx, Interaction):
-        await ctx.response.send_message(embed=error_embed, ephemeral=True)
-    elif ctx.interaction:
+    if isinstance(ctx, Interaction):  # called from ui
+        await ctx.followup.send(embed=error_embed, ephemeral=True)
+    elif isinstance(ctx, PartialMessageable):  # called from start()
+        await ctx.send(embed=error_embed)
+    elif ctx.interaction:  # called from a hybrid command as an app command
         await ctx.interaction.response.send_message(embed=error_embed, ephemeral=True)
-    else:
+    else:  # called from a hybrid command as a text command or from event listener
         await ctx.reply(embed=error_embed, delete_after=7)
         await ctx.message.delete(delay=7)
+
+
+async def send_alert(
+    interaction: Interaction, loc: Localization, action: str, callback: Callable, *params: Any
+) -> None:
+    """
+    Sends an alert to the given :class:`Interaction` with the given action and callback
+\
+    :param interaction: Interaction object to send to
+    :param loc: Localization object to access translations
+    :param action: Action for Embed description
+    :param callback: Callback to send if confirmed
+    :return: None
+    """
+
+    await interaction.response.send_message(  # not followup because it is always the first response
+        embed=Embed(
+            title=loc.ui.alert_title,
+            description=loc.ui.alert_desc.format(action),
+            color=Colors.purple
+        ),
+        view=AlertView(loc, callback, *params),
+        ephemeral=True
+    )
 
 
 async def count_certain_reacted_users(reaction: Reaction, users: Iterable[User]) -> int:
@@ -124,20 +180,20 @@ async def pros_and_cons(msg: Message, delay: float, counted_users: Iterable[User
     return pros, cons
 
 
-async def send_fields(ctx: Context, first_cap: User, second_cap: User) -> None:
+async def send_fields(channel: PartialMessageable, first_cap: User, second_cap: User) -> None:
     """
     Sends fields to the game text channel (player filed) and to the captains (captain field)
 
-    :param ctx: Context object to access the game text channel and the guild id
+    :param channel: Context object to access the game text channel and the guild id
     :param first_cap: First captain User object
     :param second_cap: Second captain User object
     :return: None
     """
 
-    pl_field = File(Paths.pl_img(ctx.guild.id), filename="player_field.png")
-    await ctx.send(file=pl_field)
+    pl_field = File(Paths.pl_img(channel.guild.id), filename="player_field.png")
+    await channel.send(file=pl_field)
 
-    cap_field = File(Paths.cap_img(ctx.guild.id), filename="captain_field.png")
+    cap_field = File(Paths.cap_img(channel.guild.id), filename="captain_field.png")
     await first_cap.send(file=cap_field)
-    cap_field = File(Paths.cap_img(ctx.guild.id), filename="captain_field.png")
+    cap_field = File(Paths.cap_img(channel.guild.id), filename="captain_field.png")
     await second_cap.send(file=cap_field)
