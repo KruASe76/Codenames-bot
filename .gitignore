@@ -2,7 +2,7 @@
 .idea/
 .fleet/
 
-/venv*/
+.env
 
 __pycache__/
 *.db-journal
