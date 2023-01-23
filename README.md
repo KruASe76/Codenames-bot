@@ -36,3 +36,5 @@
 ## Original game (reference)
 
 [![Codenames logo](https://cdn.discordapp.com/attachments/797224818763104317/1026149729194754068/codenames-gradient.png)](https://en.codenames.me/)
+
+> Created by [deNULL](https://github.com/deNULL)
