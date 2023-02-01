@@ -5,7 +5,7 @@ from discord.app_commands import describe, locale_str
 from bot import CodenamesBot
 from handlers.ui import LocalizationView
 from handlers.checks import is_moderator
-from misc.constants import flags, Colors
+from misc.constants import flags_loc, Colors
 
 
 class SettingsCog(Cog, name="settings"):
@@ -45,7 +45,7 @@ class SettingsCog(Cog, name="settings"):
 
         language_embed = Embed(
             title=loc.commands.language.title,
-            description=loc.commands.language.desc_current.format(current_loc.upper(), flags[current_loc]),
+            description=loc.commands.language.desc_current.format(current_loc.upper(), flags_loc[current_loc]),
             color=Colors.purple
         )
 

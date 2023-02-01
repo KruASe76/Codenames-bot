@@ -13,7 +13,7 @@ from handlers.ui import RegistrationView
 from misc.util import send_error, send_fields, most_count_reaction_emojis, pros_and_cons
 import misc.generation as gen
 from misc.constants import (
-    EMPTY, ALPHABET, REACTION_ALPHABET, REACTION_R, REACTION_NUMBERS, flags_rev, dictionaries, Paths, Colors
+    EMPTY, ALPHABET, REACTION_ALPHABET, REACTION_R, REACTION_NUMBERS, flags_lang_rev, dictionaries, Paths, Colors
 )
 
 
@@ -113,19 +113,15 @@ class GameCog(Cog, name="game"):
 
         loc = await self.bot.db.localization(interaction)
 
-        # Final player list preparation and show
-
-        await asyncio.sleep(1)
-
         # Dictionary selection
         language_msg = await channel.send(embed=Embed(
             title=loc.commands.start.lang_selection_title,
             color=Colors.purple
         ))
-        for flag in flags_rev.keys():
+        for flag in flags_lang_rev.keys():
             await language_msg.add_reaction(flag)
 
-        dict_language: str = flags_rev[
+        dict_language: str = flags_lang_rev[
             (await self.bot.wait_for(
                 "reaction_add",
                 check=lambda reaction, user: reaction.message == language_msg and
@@ -251,7 +247,7 @@ class GameCog(Cog, name="game"):
                 ),
                 color=Colors.red
             ))
-        
+
         await team2_cap.send(embed=Embed(
             title=loc.game.start_notification_title,
             description=loc.game.start_notification_desc_cap.format(
@@ -314,7 +310,7 @@ class GameCog(Cog, name="game"):
                     Paths.cap_img_init(channel.guild.id)
                 )
                 first_round = False
-            
+
             await channel.send(embed=Embed(
                 title=loc.game.waiting_title,
                 description=loc.game.waiting_desc_cap.format(current_color),
@@ -373,7 +369,7 @@ class GameCog(Cog, name="game"):
                         description=loc.game.voting_for_stopping_desc,
                         color=Colors.purple
                     ))
-                    
+
                     pros, cons = await pros_and_cons(stop_msg, 15, team1 + team2)
                     if pros > cons:
                         await channel.send(embed=Embed(
@@ -390,9 +386,9 @@ class GameCog(Cog, name="game"):
                             description=loc.game.game_continued_desc,
                             color=Colors.purple
                         ))
-                        
+
                         continue  # No need to generate a new field or decrease word_count
-                
+
                 opened_words.append(move)
                 available_words.remove(move)
                 gen.field(team1_words, team2_words, endgame_word, no_team_words, opened_words, order, channel.guild.id)
@@ -435,7 +431,7 @@ class GameCog(Cog, name="game"):
 
                     if set(other_words) <= set(opened_words):  # If all second_words are opened
                         await send_fields(channel, current_cap, other_cap)
-                        
+
                         await channel.send(embed=Embed(
                             title=loc.game.game_over_title,
                             description=loc.game.game_over_desc_all.format(other_color),
@@ -455,7 +451,7 @@ class GameCog(Cog, name="game"):
                                 color=Colors.red if other_color == loc.game.red else Colors.blue
                             ))
                             await self.bot.db.increase_stats(player.id, ("games",))
-                        
+
                         await other_cap.send(embed=Embed(
                             title=loc.game.your_team_won_title,
                             description=loc.game.your_team_won_desc,
@@ -472,7 +468,7 @@ class GameCog(Cog, name="game"):
 
                         game_running = False
                         break
-                    
+
                     break
                 elif move == endgame_word:
                     await move_msg.reply(embed=Embed(
@@ -492,13 +488,13 @@ class GameCog(Cog, name="game"):
                     ))
 
                     await send_fields(channel, current_cap, other_cap)
-                    
+
                     await channel.send(embed=Embed(
                         title=loc.game.game_over_title,
                         description=loc.game.game_over_desc_endgame.format(other_color, current_color),
                         color=Colors.red if other_color == loc.game.red else Colors.blue
                     ))
-                    
+
                     await current_cap.send(embed=Embed(
                         title=loc.game.your_team_lost_title,
                         description=loc.game.your_team_lost_desc,
@@ -512,7 +508,7 @@ class GameCog(Cog, name="game"):
                             color=Colors.red if other_color == loc.game.red else Colors.blue
                         ))
                         await self.bot.db.increase_stats(player.id, ("games",))
-                    
+
                     await other_cap.send(embed=Embed(
                         title=loc.game.your_team_won_title,
                         description=loc.game.your_team_won_desc,
@@ -548,13 +544,13 @@ class GameCog(Cog, name="game"):
 
                     if set(current_words) <= set(opened_words):  # If all first_words are opened
                         await send_fields(channel, current_cap, other_cap)
-                        
+
                         await channel.send(embed=Embed(
                             title=loc.game.game_over_title,
                             description=loc.game.game_over_desc_all.format(current_color),
                             color=Colors.red if current_color == loc.game.red else Colors.blue
                         ))
-                        
+
                         await current_cap.send(embed=Embed(
                             title=loc.game.your_team_won_title,
                             description=loc.game.your_team_won_desc,
@@ -568,7 +564,7 @@ class GameCog(Cog, name="game"):
                                 color=Colors.red if current_color == loc.game.red else Colors.blue
                             ))
                             await self.bot.db.increase_stats(player.id, ("games", "wins"))
-                        
+
                         await other_cap.send(embed=Embed(
                             title=loc.game.your_team_lost_title,
                             description=loc.game.your_team_lost_desc,
@@ -590,7 +586,7 @@ class GameCog(Cog, name="game"):
                         await send_fields(channel, current_cap, other_cap)
 
                 word_count -= 1
-            
+
             current_color, other_color = other_color, current_color
             current_cap, other_cap = other_cap, current_cap
             current_pl, other_pl = other_pl, current_pl
@@ -599,7 +595,7 @@ class GameCog(Cog, name="game"):
         # Sending initial captain filed to the guild text channel
         initial_cap_field = File(Paths.cap_img_init(channel.guild.id), filename="initial_captain_field.png")
         await channel.send(file=initial_cap_field)
-        
+
         os.remove(Paths.pl_img(channel.guild.id))
         os.remove(Paths.cap_img(channel.guild.id))
         os.remove(Paths.cap_img_init(channel.guild.id))

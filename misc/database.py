@@ -22,7 +22,7 @@ class Database:
         """
 
         return cls._instance
-    
+
     @classmethod
     async def create(cls) -> None:
         """
@@ -32,7 +32,7 @@ class Database:
         """
 
         db = await aiosqlite.connect(Paths.db)
-        
+
         await db.execute(
             "CREATE TABLE IF NOT EXISTS guilds "
             "(id int primary key, prefix text, localization text)"
@@ -67,8 +67,8 @@ class Database:
         cursor = await self._db.execute(sql, parameters)
         res = await cursor.fetchall() if fetchall else await cursor.fetchone()
         await cursor.close()
-        
-        return tuple(res) if res else None
+
+        return tuple(res) if res else (tuple() if fetchall else None)
 
     async def exec_and_commit(self, sql: str, parameters: Iterable[Any] | None = None) -> None:
         """

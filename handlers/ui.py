@@ -8,7 +8,7 @@ from handlers.checks import is_moderator
 from misc.database import Database
 from misc.util import send_alert, send_error
 from misc.messages import Localization
-from misc.constants import flags_rev, Colors, EMPTY
+from misc.constants import flags_loc_rev, Colors, EMPTY
 
 
 class LocalizationButton(Button):
@@ -18,7 +18,7 @@ class LocalizationButton(Button):
         self.db = db
 
     async def callback(self, interaction: Interaction) -> None:
-        new_loc: str = flags_rev[self.flag]
+        new_loc: str = flags_loc_rev[self.flag]
 
         if interaction.guild:
             await self.db.exec_and_commit(
@@ -48,7 +48,7 @@ class LocalizationView(View):
         super().__init__()
         self.db = Database()
 
-        for flag in flags_rev.keys():
+        for flag in flags_loc_rev.keys():
             self.add_item(LocalizationButton(flag, self.db))
 
 
@@ -56,8 +56,10 @@ class LocalizationView(View):
 class RegistrationView(View):
     # noinspection PyUnresolvedReferences
     def __init__(
-        self, loc: Localization,
-        start_callback: Callable[[Interaction, list[User], list[User]], Coroutine[Any, Any, None]], caller_id: int
+        self,
+        loc: Localization,
+        start_callback: Callable[[Interaction, list[User], list[User]], Coroutine[Any, Any, None]],
+        caller_id: int
     ) -> None:
         super().__init__()
 
@@ -68,9 +70,9 @@ class RegistrationView(View):
 
         self.game_started = False
 
-        self.no_team = []
-        self.team1 = []
-        self.team2 = []
+        self.no_team: list[User] = []
+        self.team1: list[User] = []
+        self.team2: list[User] = []
 
         self.children[1].label = loc.ui.random
         self.children[3].label = loc.ui.leave
@@ -206,11 +208,21 @@ class RegistrationView(View):
             await send_error(interaction, self.loc.errors.title, self.loc.errors.too_many_players)
             return
 
-        self.game_started = True
-
         self.no_team = []
         self.team1 = team1_temp
         self.team2 = team2_temp
+
+        # Adding players to the database
+        db = Database()
+        already_registered = map(lambda row: row[0], await db.fetch("SELECT id FROM players", fetchall=True))
+        for player in self.team1 + self.team2:
+            if player.id not in already_registered:
+                await db.exec_and_commit(
+                    "INSERT INTO players VALUES (?,strftime('%d/%m/%Y','now'),?,?,?,?,?,?)",
+                    (player.id, "", self.loc.literal, 0, 0, 0, 0)
+                )
+
+        self.game_started = True
 
         await self.update_player_list(interaction, final=True)
 

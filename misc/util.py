@@ -176,7 +176,7 @@ async def pros_and_cons(msg: Message, delay: float, counted_users: Iterable[User
             pros = await count_certain_reacted_users(reaction, counted_users)
         else:
             cons = await count_certain_reacted_users(reaction, counted_users)
-    
+
     return pros, cons
 
 

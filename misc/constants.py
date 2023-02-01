@@ -43,11 +43,17 @@ dictionaries = {
     }
 }
 
-flags = {
+flags_loc = {
     "en": "🇬🇧",
     "ru": "🇷🇺"
 }
-flags_rev = {v: k for k, v in flags.items()}
+flags_loc_rev = {v: k for k, v in flags_loc.items()}
+
+flags_lang = {
+    "en": "🇬🇧",
+    "ru": "🇷🇺"
+}
+flags_lang_rev = {v: k for k, v in flags_lang.items()}
 
 
 class Paths:
@@ -93,7 +99,7 @@ class Colors:
     blue = Color.from_rgb(80, 187, 255)
     white = Color.from_rgb(220, 220, 220)
     black = Color.from_rgb(34, 34, 34)
-    
+
     red_fill = (255, 100, 80)
     red_font = (136, 16, 0)
     red_opened_fill = (255, 223, 219)

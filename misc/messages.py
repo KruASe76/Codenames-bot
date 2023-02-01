@@ -145,7 +145,7 @@ class UI:
 class HelpAndBrief:
     help: str
     brief: str = None
-    
+
     def __post_init__(self) -> None:
         self.brief = self.brief or self.help
 
@@ -172,6 +172,7 @@ class Errors:
 
 @dataclass
 class Localization:
+    literal: str
     game: Game
     help: dict[str, HelpAndBrief]
     cogs: dict[str, CogName]
@@ -182,6 +183,7 @@ class Localization:
 
 messages = {
     "en": Localization(
+        literal="en",
         game=Game(
             red="RED",
             blue="BLUE",
@@ -354,6 +356,7 @@ messages = {
         )
     ),
     "ru": Localization(
+        literal="ru",
         game=Game(
             red="КРАСНЫХ",
             blue="СИНИХ",
