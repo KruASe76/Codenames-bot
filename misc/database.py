@@ -92,10 +92,21 @@ class Database:
         """
 
         if ctx.guild:
-            return messages[(await self.fetch("SELECT localization FROM guilds WHERE id=?", (ctx.guild.id,)))[0]]
+            request = await self.fetch("SELECT localization FROM guilds WHERE id=?", (ctx.guild.id,))
+
+            if not request:  # should not normally happen
+                await self.exec_and_commit("INSERT INTO guilds VALUES (?,?,?)", (ctx.guild.id, "", "en"))
         else:
             user_id = ctx.author.id if isinstance(ctx, Context) else ctx.user.id
-            return messages[(await self.fetch("SELECT localization FROM players WHERE id=?", (user_id,)))[0]]
+            request = await self.fetch("SELECT localization FROM players WHERE id=?", (user_id,))
+
+            if not request:  # if the user sends a slash command to the bot as the first use in DMs
+                await self.exec_and_commit(
+                    "INSERT INTO players VALUES (?,strftime('%d/%m/%Y','now'),?,?,?,?,?,?)",
+                    (user_id, "", "en", 0, 0, 0, 0)
+                )
+
+        return messages[request[0]] if request else messages["en"]
 
     async def increase_stats(self, player_id: int, stats: Iterable[str]) -> None:
         """

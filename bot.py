@@ -31,18 +31,20 @@ class CodenamesBot(Bot):
 
 async def get_prefix(bot: CodenamesBot, message: Message) -> Iterable[str]:
     if message.guild:
-        prefix = (await bot.db.fetch("SELECT prefix FROM guilds WHERE id=?", (message.guild.id,)))[0]
-    else:
-        request = (await bot.db.fetch("SELECT prefix FROM players WHERE id=?", (message.author.id,)))
+        request = await bot.db.fetch("SELECT prefix FROM guilds WHERE id=?", (message.guild.id,))
 
-        if not request:
+        if not request:  # should not normally happen
+            await bot.db.exec_and_commit("INSERT INTO guilds VALUES (?,?,?)", (message.guild.id, "", "en"))
+    else:
+        request = await bot.db.fetch("SELECT prefix FROM players WHERE id=?", (message.author.id,))
+
+        if not request:  # if the user sends a text command to the bot as the first use in DMs
             await bot.db.exec_and_commit(
                 "INSERT INTO players VALUES (?,strftime('%d/%m/%Y','now'),?,?,?,?,?,?)",
                 (message.author.id, "", "en", 0, 0, 0, 0)
             )
 
-        prefix = request[0] if request else ""
-
+    prefix = request[0] if request else ""
     res = (prefix, "cdn") if prefix else ("cdn",)
 
     return when_mentioned_or(*res)(bot, message)
