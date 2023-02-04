@@ -60,19 +60,17 @@ class HelpCog(Cog, name="help"):
                 if cog_name in ("events", "help", "maintenance"):
                     continue
 
-                def guild(command: Command) -> str:
-                    return f"**[{loc.commands.help.guild}]** " if if_command_has_check(command, "guild_only") else ""
-
                 def mod(command: Command) -> str:
                     return f"**[{loc.commands.help.moderator_shortened}]** " \
                         if if_command_has_check(command, "is_moderator") and ctx.guild else ""
 
-                cog_comms = map(
-                    lambda comm: f"**`{prefix}{comm.name}`** - {guild(comm)}{mod(comm)}{loc.help[comm.name].brief}",
-                    cog.get_commands()
-                )
+                cog_comms = tuple(map(
+                    lambda comm: f"**`{prefix}{comm.name}`** - {mod(comm)}{loc.help[comm.name].brief}",
+                    filter(lambda comm: ctx.guild or not if_command_has_check(comm, "guild_only"), cog.get_commands())
+                ))
 
-                help_embed.add_field(name=loc.cogs[cog_name].plural, value="\n".join(cog_comms), inline=False)
+                if cog_comms:
+                    help_embed.add_field(name=loc.cogs[cog_name].plural, value="\n".join(cog_comms), inline=False)
 
             help_embed.add_field(
                 name=EMPTY,
