@@ -89,13 +89,9 @@ class HelpCog(Cog, name="help"):
     @describe(command=locale_str("help_command_param"))
     @choices(
         command=[
-            Choice(name="register", value="register"),
+            Choice(name="game", value="game"),
             Choice(name="stats", value="stats"),
-            Choice(name="top", value="top"),
-            Choice(name="players", value="players"),
-            Choice(name="start", value="start"),
-            Choice(name="leave", value="leave"),
-            Choice(name="clear", value="clear"),
+            # Choice(name="top", value="top"),
             Choice(name="language", value="language"),
             Choice(name="prefix", value="prefix")
         ]
