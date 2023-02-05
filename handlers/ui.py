@@ -214,7 +214,7 @@ class RegistrationView(View):
 
         # Adding players to the database
         db = Database()
-        already_registered = map(lambda row: row[0], await db.fetch("SELECT id FROM players", fetchall=True))
+        already_registered = tuple(map(lambda row: row[0], await db.fetch("SELECT id FROM players", fetchall=True)))
         for player in self.team1 + self.team2:
             if player.id not in already_registered:
                 await db.exec_and_commit(

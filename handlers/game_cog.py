@@ -300,9 +300,11 @@ class GameCog(Cog, name="game"):
         # Mainloop
         game_running = True
         first_round = True
+        send_field_to_caps = True
         while game_running:
             gen.field(team1_words, team2_words, endgame_word, no_team_words, opened_words, order, channel.guild.id)
-            await send_fields(channel, current_cap, other_cap)
+            await send_fields(channel, current_cap, other_cap, send_field_to_caps)
+            send_field_to_caps = True
 
             if first_round:
                 shutil.copy(
@@ -358,10 +360,11 @@ class GameCog(Cog, name="game"):
                         (msg.content.lower() in available_words or msg.content == "0")
                     ) or (msg.content == "000" and msg.author in team1 + team2)
                 )
-                move = move_msg.content.lower()
+                move = move_msg.content.lower().replace("ё", "е")
 
                 if move == "0":
                     await move_msg.add_reaction("🆗")
+                    send_field_to_caps = False
                     break
                 if move == "000":
                     stop_msg = await move_msg.reply(embed=Embed(
