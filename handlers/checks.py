@@ -8,7 +8,7 @@ def is_moderator():
     async def predicate(ctx: Context | Interaction) -> bool:
         user = ctx.author if isinstance(ctx, Context) else ctx.user
 
-        if ctx.channel.permissions_for(user).manage_messages or user in ADMINS:
+        if not ctx.guild or ctx.channel.permissions_for(user).manage_messages or user in ADMINS:
             return True
 
         if isinstance(ctx, Interaction):
