@@ -17,9 +17,10 @@
       3. end or continuation of the move (according to its colour)
   - Ability to finish the move (if the team is unsure which word to open next)
   - Ability to finish the game (with a voting)
+- _Multiple games on the same server_
 - Playing field image generation
 - Per-player statistics collection
-  - Best players list (global, within a server, within a role)
+  - Player top (global, within a server, within a role) - **WIP**
 - Custom bot prefixes for servers and DMs
 - Bot messages localization for servers and DMs
   - 🇬🇧 English

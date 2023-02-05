@@ -12,20 +12,19 @@ from misc.constants import font, big_font, Paths, FieldSizing, Colors
 def field(
     team1_words: Iterable[str], team2_words: Iterable[str], endgame_word: str, no_team_words: Iterable[str],
     opened_words: Iterable[str], order: Sequence[str],
-    guild_id: int
+    uuid: str
 ) -> None:
     """
-    The field function creates and saves captain and player fields as images from the given game word lists.
+    Creates and saves captain and player fields as images from the given game word lists.
 
-    :param team1_words:Iterable[str]: Fill the red field
-    :param team2_words:Iterable[str]: Pass the words of team 2 to field() function
-    :param endgame_word:str: Determine whether the game has ended
-    :param no_team_words:Iterable[str]: Prevent the same word from being used twice in a game
-    :param opened_words:Iterable[str]: Prevent the same word from being used twice in a game
-    :param order:Sequence[str]: Place the words in a grid
-    :param guild_id:int: Prevent conflicts with other games
-    :return: Nothing because it only creates images
-    :doc-author: Trelent
+    :param team1_words: Red cards
+    :param team2_words: Blue cards
+    :param endgame_word: Black card
+    :param no_team_words: White cards
+    :param opened_words: "Used" words
+    :param order: Order that the words should be displayed in
+    :param uuid: Game uuid to save images without conflicts
+    :return: None
     """
 
     img = Image.new("RGB", (FieldSizing.width, FieldSizing.height), (255, 255, 255))
@@ -202,8 +201,8 @@ def field(
             )
 
     os.makedirs(Paths.img_dir, exist_ok=True)
-    cap_img.save(Paths.cap_img(guild_id))
-    pl_img.save(Paths.pl_img(guild_id))
+    cap_img.save(Paths.cap_img(uuid))
+    pl_img.save(Paths.pl_img(uuid))
 
 
 def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple[str]]:

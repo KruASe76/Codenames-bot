@@ -3,6 +3,7 @@ import os
 import random
 import re
 import shutil
+from uuid import uuid4 as get_uuid
 
 from discord import User, Member, Embed, File, Interaction
 from discord.ext.commands import Context, Cog, hybrid_command, guild_only
@@ -109,6 +110,8 @@ class GameCog(Cog, name="game"):
 
 
     async def start(self, interaction: Interaction, team1: list[User], team2: list[User]) -> None:
+        game_uuid = str(get_uuid())
+
         channel = self.bot.get_partial_messageable(interaction.channel_id, guild_id=interaction.guild_id)
 
         loc = await self.bot.db.localization(interaction)
@@ -302,14 +305,14 @@ class GameCog(Cog, name="game"):
         first_round = True
         send_field_to_caps = True
         while game_running:
-            gen.field(team1_words, team2_words, endgame_word, no_team_words, opened_words, order, channel.guild.id)
-            await send_fields(channel, current_cap, other_cap, send_field_to_caps)
+            gen.field(team1_words, team2_words, endgame_word, no_team_words, opened_words, order, game_uuid)
+            await send_fields(game_uuid, channel, current_cap, other_cap, send_field_to_caps)
             send_field_to_caps = True
 
             if first_round:
                 shutil.copy(
-                    Paths.cap_img(channel.guild.id),
-                    Paths.cap_img_init(channel.guild.id)
+                    Paths.cap_img(game_uuid),
+                    Paths.cap_img_init(game_uuid)
                 )
                 first_round = False
 
@@ -394,7 +397,7 @@ class GameCog(Cog, name="game"):
 
                 opened_words.append(move)
                 available_words.remove(move)
-                gen.field(team1_words, team2_words, endgame_word, no_team_words, opened_words, order, channel.guild.id)
+                gen.field(team1_words, team2_words, endgame_word, no_team_words, opened_words, order, game_uuid)
 
                 if move in no_team_words:
                     await move_msg.reply(embed=Embed(
@@ -414,7 +417,7 @@ class GameCog(Cog, name="game"):
                     ))
 
                     if word_count > 0:  # If quitting after this move, field will be sent twice in a row
-                        await send_fields(channel, current_cap, other_cap)
+                        await send_fields(game_uuid, channel, current_cap, other_cap)
                 elif move in other_words:
                     await move_msg.reply(embed=Embed(
                         title=loc.game.miss_title,
@@ -433,7 +436,7 @@ class GameCog(Cog, name="game"):
                     ))
 
                     if set(other_words) <= set(opened_words):  # If all second_words are opened
-                        await send_fields(channel, current_cap, other_cap)
+                        await send_fields(game_uuid, channel, current_cap, other_cap)
 
                         await channel.send(embed=Embed(
                             title=loc.game.game_over_title,
@@ -490,7 +493,7 @@ class GameCog(Cog, name="game"):
                         color=Colors.black
                     ))
 
-                    await send_fields(channel, current_cap, other_cap)
+                    await send_fields(game_uuid, channel, current_cap, other_cap)
 
                     await channel.send(embed=Embed(
                         title=loc.game.game_over_title,
@@ -546,7 +549,7 @@ class GameCog(Cog, name="game"):
                     ))
 
                     if set(current_words) <= set(opened_words):  # If all first_words are opened
-                        await send_fields(channel, current_cap, other_cap)
+                        await send_fields(game_uuid, channel, current_cap, other_cap)
 
                         await channel.send(embed=Embed(
                             title=loc.game.game_over_title,
@@ -586,7 +589,7 @@ class GameCog(Cog, name="game"):
                         break
 
                     if word_count > 0:  # If quitting after this move, field will be sent twice in a row
-                        await send_fields(channel, current_cap, other_cap)
+                        await send_fields(game_uuid, channel, current_cap, other_cap)
 
                 word_count -= 1
 
@@ -596,12 +599,12 @@ class GameCog(Cog, name="game"):
             current_words, other_words = other_words, current_words
 
         # Sending initial captain filed to the guild text channel
-        initial_cap_field = File(Paths.cap_img_init(channel.guild.id), filename="initial_captain_field.png")
+        initial_cap_field = File(Paths.cap_img_init(game_uuid), filename="initial_captain_field.png")
         await channel.send(file=initial_cap_field)
 
-        os.remove(Paths.pl_img(channel.guild.id))
-        os.remove(Paths.cap_img(channel.guild.id))
-        os.remove(Paths.cap_img_init(channel.guild.id))
+        os.remove(Paths.pl_img(game_uuid))
+        os.remove(Paths.cap_img(game_uuid))
+        os.remove(Paths.cap_img_init(game_uuid))
 
 
 async def setup(bot: CodenamesBot) -> None:
