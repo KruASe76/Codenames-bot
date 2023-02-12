@@ -11,3 +11,15 @@ __pycache__/
 /state/
 
 test.py
+
+
+.git/
+.gitignore
+
+README.md
+LICENSE
+
+Pipfile
+Pipfile.lock
+
+/run_docker.sh

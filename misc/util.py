@@ -194,11 +194,8 @@ async def send_fields(
     :return: None
     """
 
-    pl_field = File(Paths.pl_img(uuid), filename="player_field.png")
-    await channel.send(file=pl_field)
+    await channel.send(file=File(Paths.pl_img(uuid), filename="player_field.png"))
 
     if send_to_caps:
-        cap_field = File(Paths.cap_img(uuid), filename="captain_field.png")
-        await first_cap.send(file=cap_field)
-        cap_field = File(Paths.cap_img(uuid), filename="captain_field.png")
-        await second_cap.send(file=cap_field)
+        await first_cap.send(file=File(Paths.cap_img(uuid), filename="captain_field.png"))
+        await second_cap.send(file=File(Paths.cap_img(uuid), filename="captain_field.png"))

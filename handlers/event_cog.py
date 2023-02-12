@@ -45,11 +45,11 @@ class EventCog(Cog, name="events"):
 
     @Cog.listener()
     async def on_guild_join(self, guild: Guild) -> None:
-        await self.bot.db.exec_and_commit("INSERT INTO guilds VALUES (?,?,?)", (guild.id, "", "en"))
+        await self.bot.db.exec_and_commit("INSERT INTO guilds VALUES (?, ?, ?)", (guild.id, "", "en"))
 
     @Cog.listener()
     async def on_guild_remove(self, guild: Guild) -> None:
-        await self.bot.db.exec_and_commit("DELETE FROM guilds WHERE id=?", (guild.id,))
+        await self.bot.db.exec_and_commit("DELETE FROM guilds WHERE id = ?", (guild.id,))
 
 
 async def setup(bot: CodenamesBot) -> None:

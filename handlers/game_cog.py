@@ -60,7 +60,7 @@ class GameCog(Cog, name="game"):
             return
 
         info = await self.bot.db.fetch(
-            "SELECT date, games, games_cap, wins, wins_cap FROM players WHERE id=?",
+            "SELECT date, games, games_cap, wins, wins_cap FROM players WHERE id = ?",
             (member.id,)
         )
         if not info:
@@ -599,8 +599,7 @@ class GameCog(Cog, name="game"):
             current_words, other_words = other_words, current_words
 
         # Sending initial captain filed to the guild text channel
-        initial_cap_field = File(Paths.cap_img_init(game_uuid), filename="initial_captain_field.png")
-        await channel.send(file=initial_cap_field)
+        await channel.send(file=File(Paths.cap_img_init(game_uuid), filename="initial_captain_field.png"))
 
         os.remove(Paths.pl_img(game_uuid))
         os.remove(Paths.cap_img(game_uuid))

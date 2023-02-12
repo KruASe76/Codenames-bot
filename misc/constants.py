@@ -57,8 +57,8 @@ flags_lang_rev = {v: k for k, v in flags_lang.items()}
 
 
 class Paths:
-    img_dir = Path("images")
-    db = Path("base.db")
+    img_dir = Path("state", "images")
+    db = Path("state", "base.db")
 
     @classmethod
     def cap_img(cls, uuid: str) -> Path:

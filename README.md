@@ -27,8 +27,56 @@
   - 🇷🇺 Russian
 
 
-## Used libraries
+## Running yourself
+...if somebody even needs that
 
+### Docker
+
+Using bash script:  
+```shell
+curl -o run_docker.sh https://raw.githubusercontent.com/KruASe76/Codenames-bot/main/run_docker.sh
+./run_docker.sh $TOKEN
+```
+
+Using docker directly:
+```shell
+docker pull kruase/codenames_bot
+docker run -dti --name codenames_bot -e TOKEN="$TOKEN" -v codenames_bot_state:/bot/state kruase/codenames_bot
+```
+
+### Pipenv
+```shell
+git clone https://github.com/KruASe76/Codenames-bot.git
+cd Codenames-bot
+pipenv install
+pipenv run python3 main.py
+```
+
+### Pure python 3.11
+Windows (PowerShell):
+```shell
+git clone https://github.com/KruASe76/Codenames-bot.git
+cd Codenames-bot
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python main.py
+```
+
+Linux / MacOS:
+```shell
+git clone https://github.com/KruASe76/Codenames-bot.git
+cd Codenames-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 main.py
+```
+
+
+## Stack
+
+- [python 3.11](https://www.python.org/) - programming language
 - [discord.py (v2)](https://pypi.org/project/discord.py/) as Discord API wrapper
 - [Pillow (PIL)](https://pypi.org/project/Pillow/) for image generation
 - [aiosqlite](https://pypi.org/project/aiosqlite/) for asynchronous database handling

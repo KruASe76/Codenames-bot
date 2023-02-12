@@ -12,26 +12,27 @@ from misc.constants import flags_loc_rev, Colors, EMPTY
 
 
 class LocalizationButton(Button):
-    def __init__(self, flag: str, db: Database) -> None:
+    def __init__(self, flag: str) -> None:
         super().__init__(emoji=flag, style=ButtonStyle.grey)
         self.flag = flag
-        self.db = db
 
     async def callback(self, interaction: Interaction) -> None:
         new_loc: str = flags_loc_rev[self.flag]
 
+        db = Database()
+
         if interaction.guild:
-            await self.db.exec_and_commit(
-                "UPDATE guilds SET localization=? WHERE id=?",
+            await db.exec_and_commit(
+                "UPDATE guilds SET localization = ? WHERE id = ?",
                 (new_loc, interaction.guild.id)
             )
         else:
-            await self.db.exec_and_commit(
-                "UPDATE players SET localization=? WHERE id=?",
+            await db.exec_and_commit(
+                "UPDATE players SET localization = ? WHERE id = ?",
                 (new_loc, interaction.user.id)
             )
 
-        loc = await self.db.localization(interaction)
+        loc = await db.localization(interaction)
 
         await interaction.response.edit_message(
             embed=Embed(
@@ -46,10 +47,9 @@ class LocalizationButton(Button):
 class LocalizationView(View):
     def __init__(self) -> None:
         super().__init__()
-        self.db = Database()
 
         for flag in flags_loc_rev.keys():
-            self.add_item(LocalizationButton(flag, self.db))
+            self.add_item(LocalizationButton(flag))
 
 
 # noinspection PyUnusedLocal
@@ -214,12 +214,19 @@ class RegistrationView(View):
 
         # Adding players to the database
         db = Database()
-        already_registered = tuple(map(lambda row: row[0], await db.fetch("SELECT id FROM players", fetchall=True)))
-        for player in self.team1 + self.team2:
-            if player.id not in already_registered:
+        all_players_ids = tuple(map(lambda p: p.id, self.team1 + self.team2))
+        registered_ids = tuple(map(
+            lambda row: row[0],
+            await db.fetch(
+                f"SELECT id FROM players WHERE id IN ({', '.join(map(str, all_players_ids))})",
+                fetchall=True
+            )
+        ))
+        for id in all_players_ids:
+            if id not in registered_ids:
                 await db.exec_and_commit(
-                    "INSERT INTO players VALUES (?,strftime('%d/%m/%Y','now'),?,?,?,?,?,?)",
-                    (player.id, "", self.loc.literal, 0, 0, 0, 0)
+                    "INSERT INTO players VALUES (?, strftime('%d/%m/%Y','now'), ?, ?, ?, ?, ?, ?)",
+                    (id, "", self.loc.literal, 0, 0, 0, 0)
                 )
 
         self.game_started = True

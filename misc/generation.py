@@ -1,5 +1,4 @@
 import math
-import os
 import random
 from typing import Iterable, Sequence
 
@@ -200,7 +199,6 @@ def field(
                 anchor=FieldSizing.text_anchor
             )
 
-    os.makedirs(Paths.img_dir, exist_ok=True)
     cap_img.save(Paths.cap_img(uuid))
     pl_img.save(Paths.pl_img(uuid))
 

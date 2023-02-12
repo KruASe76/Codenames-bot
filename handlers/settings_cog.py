@@ -21,9 +21,9 @@ class SettingsCog(Cog, name="settings"):
         loc = await self.bot.db.localization(ctx)
 
         if ctx.guild:
-            await self.bot.db.exec_and_commit("UPDATE guilds SET prefix=? WHERE id=?", (new_prefix, ctx.guild.id))
+            await self.bot.db.exec_and_commit("UPDATE guilds SET prefix = ? WHERE id = ?", (new_prefix, ctx.guild.id))
         else:
-            await self.bot.db.exec_and_commit("UPDATE players SET prefix=? WHERE id=?", (new_prefix, ctx.author.id))
+            await self.bot.db.exec_and_commit("UPDATE players SET prefix = ? WHERE id = ?", (new_prefix, ctx.author.id))
 
         await ctx.send(embed=Embed(
             title=loc.commands.prefix.prefix_changed_title,
@@ -38,14 +38,9 @@ class SettingsCog(Cog, name="settings"):
     async def language(self, ctx: Context) -> None:
         loc = await self.bot.db.localization(ctx)
 
-        if ctx.guild:
-            current_loc = (await self.bot.db.fetch("SELECT localization FROM guilds WHERE id=?", (ctx.guild.id,)))[0]
-        else:
-            current_loc = (await self.bot.db.fetch("SELECT localization FROM players WHERE id=?", (ctx.author.id,)))[0]
-
         language_embed = Embed(
             title=loc.commands.language.title,
-            description=loc.commands.language.desc_current.format(current_loc.upper(), flags_loc[current_loc]),
+            description=loc.commands.language.desc_current.format(loc.literal.upper(), flags_loc[loc.literal]),
             color=Colors.purple
         )
 
