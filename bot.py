@@ -45,14 +45,15 @@ async def get_prefix(bot: CodenamesBot, message: Message) -> Iterable[str]:
             )
 
     prefix = request[0] if request else ""
-    res = (prefix, "cdn") if prefix else ("cdn",)
+    result = (prefix, "cdn") if prefix else ("cdn",)
 
-    return when_mentioned_or(*res)(bot, message)
+    return when_mentioned_or(*result)(bot, message)
 
 
 def main() -> None:
     os.makedirs(Paths.img_dir, exist_ok=True)
 
+    # noinspection PyTypeChecker
     bot = CodenamesBot(
         command_prefix=get_prefix,
         help_command=None,

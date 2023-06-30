@@ -40,12 +40,12 @@ class GameCog(Cog, name="game"):
     @hybrid_command(aliases=("stat", "ss", "st"), description=locale_str("stats"))
     @describe(member=locale_str("stats_member_param"), show=locale_str("stats_show_param"))
     async def stats(self, ctx: Context, member: Member | None = None, show: bool = False) -> None:
-        member = member or ctx.author
-        name = f"**{member.display_name}**"
+        player = member or ctx.author
+        name = f"**{player.global_name if player.global_name else player.display_name}**"
 
         loc = await self.bot.db.localization(ctx)
 
-        if member == self.bot.user:
+        if player == self.bot.user:
             game_master_embed = Embed(
                 title=loc.commands.stats.smbs_stats.format(name),
                 description=loc.commands.stats.egg_game_master_desc,
@@ -53,6 +53,7 @@ class GameCog(Cog, name="game"):
             )
 
             if ctx.interaction:
+                # noinspection PyUnresolvedReferences
                 await ctx.interaction.response.send_message(embed=game_master_embed, ephemeral=not show)
             else:
                 await ctx.reply(embed=game_master_embed)
@@ -61,7 +62,7 @@ class GameCog(Cog, name="game"):
 
         info = await self.bot.db.fetch(
             "SELECT date, games, games_cap, wins, wins_cap FROM players WHERE id = ?",
-            (member.id,)
+            (player.id,)
         )
         if not info:
             await send_error(ctx, loc.errors.title, loc.errors.never_played.format(name))
@@ -101,9 +102,10 @@ class GameCog(Cog, name="game"):
             value=loc.commands.stats.note,
             inline=False
         )
-        stats_embed.set_thumbnail(url=member.display_avatar)
+        stats_embed.set_thumbnail(url=player.display_avatar)
 
         if ctx.interaction:
+            # noinspection PyUnresolvedReferences
             await ctx.interaction.response.send_message(embed=stats_embed, ephemeral=not show)
         else:
             await ctx.reply(embed=stats_embed)

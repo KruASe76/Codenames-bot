@@ -49,12 +49,12 @@ docker run -dti --name codenames_bot -e TOKEN="$TOKEN" -v codenames_bot_state:/b
 git clone https://github.com/KruASe76/Codenames-bot.git
 cd Codenames-bot
 pipenv install
-pipenv run python3 main.py
+pipenv run python main.py
 ```
 
 ### Pure python 3.11
 Windows (PowerShell):
-```shell
+```powershell
 git clone https://github.com/KruASe76/Codenames-bot.git
 cd Codenames-bot
 python -m venv venv

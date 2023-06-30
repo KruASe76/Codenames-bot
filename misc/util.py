@@ -25,6 +25,7 @@ class AlertView(View):
         for button in self.children:
             button.disabled = True
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.edit_message(view=self)
 
     @button(style=ButtonStyle.green)
@@ -32,6 +33,7 @@ class AlertView(View):
         for button in self.children:
             button.disabled = True
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.edit_message(view=self)
 
         await self.callback(*self.params)
@@ -91,6 +93,7 @@ async def send_error(ctx: Context | Interaction | PartialMessageable, title: str
     elif isinstance(ctx, PartialMessageable):  # called from start()
         await ctx.send(embed=error_embed)
     elif ctx.interaction:  # called from a hybrid command as an app command
+        # noinspection PyUnresolvedReferences
         await ctx.interaction.response.send_message(embed=error_embed, ephemeral=True)
     else:  # called from a hybrid command as a text command or from event listener
         await ctx.reply(embed=error_embed, delete_after=7)
@@ -110,6 +113,7 @@ async def send_alert(
     :return: None
     """
 
+    # noinspection PyUnresolvedReferences
     await interaction.response.send_message(  # not followup because it is always the first response
         embed=Embed(
             title=loc.ui.alert_title,

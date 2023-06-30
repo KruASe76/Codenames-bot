@@ -1,5 +1,5 @@
 import random
-from typing import Any, Callable, Coroutine
+from typing import Callable, Coroutine
 
 from discord import Interaction, ButtonStyle, Embed, User
 from discord.ui import View, Button, button
@@ -34,6 +34,7 @@ class LocalizationButton(Button):
 
         loc = await db.localization(interaction)
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.edit_message(
             embed=Embed(
                 title=loc.commands.language.title,
@@ -58,7 +59,7 @@ class RegistrationView(View):
     def __init__(
         self,
         loc: Localization,
-        start_callback: Callable[[Interaction, list[User], list[User]], Coroutine[Any, Any, None]],
+        start_callback: Callable[[Interaction, list[User], list[User]], Coroutine],
         caller_id: int
     ) -> None:
         super().__init__()
@@ -134,6 +135,7 @@ class RegistrationView(View):
 
         self.team1.append(interaction.user)
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.defer()
         await self.update_player_list(interaction)
 
@@ -143,6 +145,7 @@ class RegistrationView(View):
 
         self.no_team.append(interaction.user)
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.defer()
         await self.update_player_list(interaction)
 
@@ -152,6 +155,7 @@ class RegistrationView(View):
 
         self.team2.append(interaction.user)
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.defer()
         await self.update_player_list(interaction)
 
@@ -159,12 +163,14 @@ class RegistrationView(View):
     async def leave_button(self, interaction: Interaction, button: Button) -> None:
         self.remove_player(interaction.user)
 
+        # noinspection PyUnresolvedReferences
         await interaction.response.defer()
         await self.update_player_list(interaction)
 
     @button(emoji="⛔", style=ButtonStyle.red, row=2)
     async def cancel_button(self, interaction: Interaction, button: Button) -> None:
         if not interaction.user.id == self.caller_id and not await is_moderator().predicate(interaction):
+            # noinspection PyUnresolvedReferences
             await interaction.response.defer()  # so ctx.followup.send() from send_error won't crash
             await send_error(
                 interaction, self.loc.errors.title, self.loc.errors.no_permission.format(self.loc.errors.not_a_mod)
@@ -176,6 +182,7 @@ class RegistrationView(View):
     @button(emoji="▶️", style=ButtonStyle.green, row=2)
     async def start_button(self, interaction: Interaction, button: Button) -> None:
         if interaction.user not in self.no_team + self.team1 + self.team2:
+            # noinspection PyUnresolvedReferences
             await interaction.response.defer()  # so ctx.followup.send() from send_error won't crash
             await send_error(
                 interaction, self.loc.errors.title, self.loc.errors.no_permission.format(self.loc.errors.not_registered)

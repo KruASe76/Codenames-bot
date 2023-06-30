@@ -98,6 +98,7 @@ class HelpCog(Cog, name="help"):
         help_embed = await self.help_embed(interaction, command.value if command else None, "/")
 
         if help_embed:
+            # noinspection PyUnresolvedReferences
             await interaction.response.send_message(embed=help_embed, ephemeral=True)
 
     @text_command(name="help")
