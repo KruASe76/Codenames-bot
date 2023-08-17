@@ -274,7 +274,7 @@ class GameCog(Cog, name="game"):
                 color=Colors.blue
             ))
 
-        team1_words, team2_words, endgame_word, no_team_words = gen.words(
+        team1_words, team2_words, endgame_word, no_team_words = await gen.words(
             lang=dict_language, dict_name=game_dict_name
         )
         opened_words = []

@@ -2,6 +2,7 @@ import math
 import random
 from typing import Iterable, Sequence
 
+import aiofiles
 from PIL import Image, ImageDraw
 
 from misc.constants import font, big_font, Paths, FieldSizing, Colors
@@ -11,7 +12,7 @@ from misc.constants import font, big_font, Paths, FieldSizing, Colors
 def field(
     team1_words: Iterable[str], team2_words: Iterable[str], endgame_word: str, no_team_words: Iterable[str],
     opened_words: Iterable[str], order: Sequence[str],
-    uuid: str
+    game_uuid: str
 ) -> None:
     """
     Creates and saves captain and player fields as images from the given game word lists.
@@ -22,7 +23,7 @@ def field(
     :param no_team_words: White cards
     :param opened_words: "Used" words
     :param order: Order that the words should be displayed in
-    :param uuid: Game uuid to save images without conflicts
+    :param game_uuid: Game uuid to save images without conflicts
     :return: None
     """
 
@@ -199,11 +200,11 @@ def field(
                 anchor=FieldSizing.text_anchor
             )
 
-    cap_img.save(Paths.cap_img(uuid))
-    pl_img.save(Paths.pl_img(uuid))
+    cap_img.save(Paths.cap_img(game_uuid))
+    pl_img.save(Paths.pl_img(game_uuid))
 
 
-def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple[str]]:
+async def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple[str]]:
     """
     Returns game words randomly picked from the given dictionary
 
@@ -212,8 +213,8 @@ def words(lang: str, dict_name: str) -> tuple[tuple[str], tuple[str], str, tuple
     :return: Game words: red (tuple), blue (tuple), endgame (str), no team (tuple)
     """
 
-    with open(Paths.dictionary(lang, dict_name), "r", encoding="utf-8") as dictionary:
-        all_words = dictionary.read().lower().replace("ё", "е").split("\n")
+    async with aiofiles.open(Paths.dictionary(lang, dict_name), "r", encoding="utf-8") as dictionary:
+        all_words = (await dictionary.read()).lower().replace("ё", "е").split("\n")
     words: set[str] = set(random.sample(all_words, 25))
 
     endgame_word = random.sample(tuple(words), 1)[0]

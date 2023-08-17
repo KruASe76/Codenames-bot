@@ -61,16 +61,16 @@ class Paths:
     db = Path("state", "base.db")
 
     @classmethod
-    def cap_img(cls, uuid: str) -> Path:
-        return Path(cls.img_dir, f"{uuid}-captain.png")
+    def cap_img(cls, game_uuid: str) -> Path:
+        return Path(cls.img_dir, f"{game_uuid}-captain.png")
 
     @classmethod
-    def cap_img_init(cls, uuid: str) -> Path:
-        return Path(cls.img_dir, f"{uuid}-captain-initial.png")
+    def cap_img_init(cls, game_uuid: str) -> Path:
+        return Path(cls.img_dir, f"{game_uuid}-captain-initial.png")
 
     @classmethod
-    def pl_img(cls, uuid: str) -> Path:
-        return Path(cls.img_dir, f"{uuid}-player.png")
+    def pl_img(cls, game_uuid: str) -> Path:
+        return Path(cls.img_dir, f"{game_uuid}-player.png")
 
     @staticmethod
     def dictionary(language: str, name: str) -> Path:

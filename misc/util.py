@@ -185,12 +185,12 @@ async def pros_and_cons(msg: Message, delay: float, counted_users: Iterable[User
 
 
 async def send_fields(
-    uuid: str, channel: PartialMessageable, first_cap: User, second_cap: User, send_to_caps: bool = True
+    game_uuid: str, channel: PartialMessageable, first_cap: User, second_cap: User, send_to_caps: bool = True
 ) -> None:
     """
     Sends fields to the game text channel (player filed) and to the captains (captain field)
 
-    :param uuid: Game uuid to access field files
+    :param game_uuid: Game uuid to access field files
     :param channel: Game text channel
     :param first_cap: First captain User object
     :param second_cap: Second captain User object
@@ -198,8 +198,8 @@ async def send_fields(
     :return: None
     """
 
-    await channel.send(file=File(Paths.pl_img(uuid), filename="player_field.png"))
+    await channel.send(file=File(Paths.pl_img(game_uuid), filename="player_field.png"))
 
     if send_to_caps:
-        await first_cap.send(file=File(Paths.cap_img(uuid), filename="captain_field.png"))
-        await second_cap.send(file=File(Paths.cap_img(uuid), filename="captain_field.png"))
+        await first_cap.send(file=File(Paths.cap_img(game_uuid), filename="captain_field.png"))
+        await second_cap.send(file=File(Paths.cap_img(game_uuid), filename="captain_field.png"))

@@ -1,7 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-if [ -z "$*" ]; then
-    echo -e "\033[0;31mTOKEN must be provided\033[0m"
+if [ $# -ne 1 ];
+then
+    echo -e "\033[0;31mTOKEN (single argument) must be provided\033[0m"
     exit 1
 fi
 
