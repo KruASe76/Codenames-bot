@@ -16,43 +16,41 @@ REACTION_R = "🇷"
 REACTION_NUMBERS = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣")
 
 
-font = ImageFont.truetype(str(Path("resources", "fonts", "RobotoCondensed-Bold.ttf")), 80, encoding="utf-8")
-big_font = ImageFont.truetype(str(Path("resources", "fonts", "Roboto-Bold.ttf")), 350, encoding="utf-8")
+font = ImageFont.truetype(
+    str(Path("resources", "fonts", "RobotoCondensed-Bold.ttf")), 80, encoding="utf-8"
+)
+big_font = ImageFont.truetype(
+    str(Path("resources", "fonts", "Roboto-Bold.ttf")), 350, encoding="utf-8"
+)
 
 
 dictionaries = {
     "en": {
-        "std":      "**Original** English dictionary (400 words)",
-        "duet":     "**Original Duet** dictionary (400 words)",
-        "deep":     "**Original Deep Undercover** dictionary (**18+**, 390 words)",
-        "denull":   "**deNULL's** dictionary (763 words)",
+        "std": "**Original** English dictionary (400 words)",
+        "duet": "**Original Duet** dictionary (400 words)",
+        "deep": "**Original Deep Undercover** dictionary (**18+**, 390 words)",
+        "denull": "**deNULL's** dictionary (763 words)",
         "denull18": "**deNULL's** dictionary (**18+**, 1081 words)",
-        "all":      "**All** English dictionaries (**18+**, 1139 words)",
-        "esp":      "**Esperanto**"
+        "all": "**All** English dictionaries (**18+**, 1139 words)",
+        "esp": "**Esperanto**",
     },
     "ru": {
-        "std":      "**Стандартный** словарь из локализации GaGa Games (400 слов)",
-        "deep":     "Словарь версии **Deep Undercover**, GaGa Games (**18+**, 390 слов)",
-        "pard":     "Словарь от **Pard** (302 слова)",
-        "vpupkin":  "Словарь от **vpupkin** (396 слов, много топонимов)",
-        "zav":      "Словарь от **Ивана Заворина** (2272 частых слов)",
-        "denull":   "Словарь от **deNULL** (636 слов, немного топонимов)",
+        "std": "**Стандартный** словарь из локализации GaGa Games (400 слов)",
+        "deep": "Словарь версии **Deep Undercover**, GaGa Games (**18+**, 390 слов)",
+        "pard": "Словарь от **Pard** (302 слова)",
+        "vpupkin": "Словарь от **vpupkin** (396 слов, много топонимов)",
+        "zav": "Словарь от **Ивана Заворина** (2272 частых слов)",
+        "denull": "Словарь от **deNULL** (636 слов, немного топонимов)",
         "denull18": "Словарь от **deNULL** (**18+**, 1014 слов)",
-        "all":      "**Все** словари **вместе** (**18+**, 1058 слов)",
-        "esp":      "**Esperanto**"
-    }
+        "all": "**Все** словари **вместе** (**18+**, 1058 слов)",
+        "esp": "**Esperanto**",
+    },
 }
 
-flags_loc = {
-    "en": "🇬🇧",
-    "ru": "🇷🇺"
-}
+flags_loc = {"en": "🇬🇧", "ru": "🇷🇺"}
 flags_loc_rev = {v: k for k, v in flags_loc.items()}
 
-flags_lang = {
-    "en": "🇬🇧",
-    "ru": "🇷🇺"
-}
+flags_lang = {"en": "🇬🇧", "ru": "🇷🇺"}
 flags_lang_rev = {v: k for k, v in flags_lang.items()}
 
 
@@ -88,7 +86,9 @@ class FieldSizing:
     card_count = 5
     card_spacing = 50
     card_width = (width - (card_spacing * (card_count + 1))) / card_count
-    card_height = (height - footer_height - (card_spacing * (card_count + 1))) / card_count
+    card_height = (
+        height - footer_height - (card_spacing * (card_count + 1))
+    ) / card_count
     card_radius = 10
     card_outline_width = 2
 

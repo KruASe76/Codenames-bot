@@ -1,13 +1,23 @@
 from discord import Locale
-from discord.app_commands import Translator, locale_str, TranslationContextTypes, TranslationContextLocation
+from discord.app_commands import (
+    Translator,
+    locale_str,
+    TranslationContextTypes,
+    TranslationContextLocation,
+)
 
 from misc.messages import messages
 
 
-class CodenamesTranslator(Translator):  # only used for command and parameter descriptions
-    async def translate(self, string: locale_str, locale: Locale, context: TranslationContextTypes) -> str | None:
+class CodenamesTranslator(
+    Translator
+):  # only used for command and parameter descriptions
+    async def translate(
+        self, string: locale_str, locale: Locale, context: TranslationContextTypes
+    ) -> str | None:
         if context.location not in (
-            TranslationContextLocation.command_description, TranslationContextLocation.parameter_description
+            TranslationContextLocation.command_description,
+            TranslationContextLocation.parameter_description,
         ):
             return
 

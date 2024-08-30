@@ -1,7 +1,14 @@
 from discord import Message, Guild, Activity, ActivityType
 from discord.ext.commands import (
-    Context, Command, Cog,
-    CommandNotFound, BadArgument, MemberNotFound, NoPrivateMessage, MissingPermissions, NotOwner
+    Context,
+    Command,
+    Cog,
+    CommandNotFound,
+    BadArgument,
+    MemberNotFound,
+    NoPrivateMessage,
+    MissingPermissions,
+    NotOwner,
 )
 
 from bot import CodenamesBot
@@ -14,7 +21,9 @@ class EventCog(Cog, name="events"):
 
     @Cog.listener()
     async def on_ready(self) -> None:
-        await self.bot.change_presence(activity=Activity(type=ActivityType.watching, name="codenames.me"))
+        await self.bot.change_presence(
+            activity=Activity(type=ActivityType.watching, name="codenames.me")
+        )
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -45,11 +54,15 @@ class EventCog(Cog, name="events"):
 
     @Cog.listener()
     async def on_guild_join(self, guild: Guild) -> None:
-        await self.bot.db.exec_and_commit("INSERT INTO guilds VALUES (?, ?, ?)", (guild.id, "", "en"))
+        await self.bot.db.exec_and_commit(
+            "INSERT INTO guilds VALUES (?, ?, ?)", (guild.id, "", "en")
+        )
 
     @Cog.listener()
     async def on_guild_remove(self, guild: Guild) -> None:
-        await self.bot.db.exec_and_commit("DELETE FROM guilds WHERE id = ?", (guild.id,))
+        await self.bot.db.exec_and_commit(
+            "DELETE FROM guilds WHERE id = ?", (guild.id,)
+        )
 
 
 async def setup(bot: CodenamesBot) -> None:

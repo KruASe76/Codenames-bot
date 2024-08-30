@@ -35,7 +35,9 @@ class MaintenanceCog(Cog, name="maintenance"):
     @command()
     @is_owner()
     async def load(self, ctx: Context) -> None:
-        if len(ctx.message.attachments) != 1 or not ctx.message.attachments[0].filename.endswith(".db"):
+        if len(ctx.message.attachments) != 1 or not ctx.message.attachments[
+            0
+        ].filename.endswith(".db"):
             await ctx.message.add_reaction("❔")
             await ctx.message.delete(delay=3)
             return

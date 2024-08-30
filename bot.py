@@ -26,22 +26,32 @@ class CodenamesBot(Bot):
         await self.tree.set_translator(CodenamesTranslator())
 
         for filename in filter(lambda fn: "cog" in fn, os.listdir("handlers")):
-            await self.load_extension(f"handlers.{filename[:-3]}")  # removing ".py" at the end of the filename
+            await self.load_extension(
+                f"handlers.{filename[:-3]}"
+            )  # removing ".py" at the end of the filename
 
 
 async def get_prefix(bot: CodenamesBot, message: Message) -> Iterable[str]:
     if message.guild:
-        request = await bot.db.fetch("SELECT prefix FROM guilds WHERE id = ?", (message.guild.id,))
+        request = await bot.db.fetch(
+            "SELECT prefix FROM guilds WHERE id = ?", (message.guild.id,)
+        )
 
         if not request:  # should not normally happen
-            await bot.db.exec_and_commit("INSERT INTO guilds VALUES (?, ?, ?)", (message.guild.id, "", "en"))
+            await bot.db.exec_and_commit(
+                "INSERT INTO guilds VALUES (?, ?, ?)", (message.guild.id, "", "en")
+            )
     else:
-        request = await bot.db.fetch("SELECT prefix FROM players WHERE id = ?", (message.author.id,))
+        request = await bot.db.fetch(
+            "SELECT prefix FROM players WHERE id = ?", (message.author.id,)
+        )
 
-        if not request:  # if the user sends a text command to the bot as the first use in DMs
+        if (
+            not request
+        ):  # if the user sends a text command to the bot as the first use in DMs
             await bot.db.exec_and_commit(
                 "INSERT INTO players VALUES (?, strftime('%d/%m/%Y','now'), ?, ?, ?, ?, ?, ?)",
-                (message.author.id, "", "en", 0, 0, 0, 0)
+                (message.author.id, "", "en", 0, 0, 0, 0),
             )
 
     prefix = request[0] if request else ""
@@ -59,7 +69,7 @@ def main() -> None:
         help_command=None,
         strip_after_prefix=True,
         intents=CodenamesBot.custom_intents(),
-        owner_ids=ADMINS
+        owner_ids=ADMINS,
     )
 
     token = os.environ.get("TOKEN")

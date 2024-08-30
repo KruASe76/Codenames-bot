@@ -24,12 +24,12 @@ class LocalizationButton(Button):
         if interaction.guild:
             await db.exec_and_commit(
                 "UPDATE guilds SET localization = ? WHERE id = ?",
-                (new_loc, interaction.guild.id)
+                (new_loc, interaction.guild.id),
             )
         else:
             await db.exec_and_commit(
                 "UPDATE players SET localization = ? WHERE id = ?",
-                (new_loc, interaction.user.id)
+                (new_loc, interaction.user.id),
             )
 
         loc = await db.localization(interaction)
@@ -38,10 +38,12 @@ class LocalizationButton(Button):
         await interaction.response.edit_message(
             embed=Embed(
                 title=loc.commands.language.title,
-                description=loc.commands.language.desc_set.format(new_loc.upper(), self.flag),
-                color=Colors.purple
+                description=loc.commands.language.desc_set.format(
+                    new_loc.upper(), self.flag
+                ),
+                color=Colors.purple,
             ),
-            view=None
+            view=None,
         )
 
 
@@ -60,7 +62,7 @@ class RegistrationView(View):
         self,
         loc: Localization,
         start_callback: Callable[[Interaction, list[User], list[User]], Coroutine],
-        caller_id: int
+        caller_id: int,
     ) -> None:
         super().__init__()
 
@@ -88,45 +90,48 @@ class RegistrationView(View):
         elif player in self.team2:
             self.team2.remove(player)
 
-    async def update_player_list(self, interaction: Interaction, *, final: bool = False) -> None:
+    async def update_player_list(
+        self, interaction: Interaction, *, final: bool = False
+    ) -> None:
         if self.no_team or self.team1 or self.team2:
             players_embed = Embed(
-                title=self.loc.commands.game.registration_over if final else self.loc.commands.game.registration,
-                color=Colors.purple
+                title=self.loc.commands.game.registration_over
+                if final
+                else self.loc.commands.game.registration,
+                color=Colors.purple,
             )
 
             players_embed.add_field(
                 name=self.loc.commands.game.team1,
-                value="\n".join(map(lambda p: p.mention, self.team1)) or EMPTY
+                value="\n".join(map(lambda p: p.mention, self.team1)) or EMPTY,
             )
 
             if not final:
                 players_embed.add_field(
                     name=self.loc.commands.game.no_team,
-                    value="\n".join(map(lambda p: p.mention, self.no_team)) or EMPTY
+                    value="\n".join(map(lambda p: p.mention, self.no_team)) or EMPTY,
                 )
 
             players_embed.add_field(
                 name=self.loc.commands.game.team2,
-                value="\n".join(map(lambda p: p.mention, self.team2)) or EMPTY
+                value="\n".join(map(lambda p: p.mention, self.team2)) or EMPTY,
             )
         else:
             players_embed = Embed(
                 title=self.loc.commands.game.registration,
                 description=self.loc.commands.game.empty_list,
-                color=Colors.purple
+                color=Colors.purple,
             )
 
         if not final:
             players_embed.add_field(
                 name=EMPTY,
                 value=f"_{self.loc.commands.game.registration_instructions}_",
-                inline=False
+                inline=False,
             )
 
         await interaction.followup.edit_message(
-            interaction.message.id,
-            embed=players_embed, view=None if final else self
+            interaction.message.id, embed=players_embed, view=None if final else self
         )
 
     @button(emoji="1️⃣", style=ButtonStyle.grey, row=1)
@@ -169,28 +174,50 @@ class RegistrationView(View):
 
     @button(emoji="⛔", style=ButtonStyle.red, row=2)
     async def cancel_button(self, interaction: Interaction, button: Button) -> None:
-        if not interaction.user.id == self.caller_id and not await is_moderator().predicate(interaction):
+        if (
+            not interaction.user.id == self.caller_id
+            and not await is_moderator().predicate(interaction)
+        ):
             # noinspection PyUnresolvedReferences
-            await interaction.response.defer()  # so ctx.followup.send() from send_error won't crash
+            await (
+                interaction.response.defer()
+            )  # so ctx.followup.send() from send_error won't crash
             await send_error(
-                interaction, self.loc.errors.title, self.loc.errors.no_permission.format(self.loc.errors.not_a_mod)
+                interaction,
+                self.loc.errors.title,
+                self.loc.errors.no_permission.format(self.loc.errors.not_a_mod),
             )
             return
 
-        await send_alert(interaction, self.loc, self.loc.ui.cancel_reg, self.cancel_callback, interaction)
+        await send_alert(
+            interaction,
+            self.loc,
+            self.loc.ui.cancel_reg,
+            self.cancel_callback,
+            interaction,
+        )
 
     @button(emoji="▶️", style=ButtonStyle.green, row=2)
     async def start_button(self, interaction: Interaction, button: Button) -> None:
         if interaction.user not in self.no_team + self.team1 + self.team2:
             # noinspection PyUnresolvedReferences
-            await interaction.response.defer()  # so ctx.followup.send() from send_error won't crash
+            await (
+                interaction.response.defer()
+            )  # so ctx.followup.send() from send_error won't crash
             await send_error(
-                interaction, self.loc.errors.title, self.loc.errors.no_permission.format(self.loc.errors.not_registered)
+                interaction,
+                self.loc.errors.title,
+                self.loc.errors.no_permission.format(self.loc.errors.not_registered),
             )
             return
 
-        await send_alert(interaction, self.loc, self.loc.ui.start_game, self.start_pre_callback, interaction)
-
+        await send_alert(
+            interaction,
+            self.loc,
+            self.loc.ui.start_game,
+            self.start_pre_callback,
+            interaction,
+        )
 
     async def start_pre_callback(self, interaction: Interaction) -> None:
         if self.game_started:  # ignoring duplicate starts from same registration
@@ -208,11 +235,15 @@ class RegistrationView(View):
                 team2_temp.append(member)
 
         if len(team1_temp) < 2 or len(team2_temp) < 2:
-            await send_error(interaction, self.loc.errors.title, self.loc.errors.not_enough_players)
+            await send_error(
+                interaction, self.loc.errors.title, self.loc.errors.not_enough_players
+            )
             return
 
         if len(team1_temp) > 25 or len(team2_temp) > 25:
-            await send_error(interaction, self.loc.errors.title, self.loc.errors.too_many_players)
+            await send_error(
+                interaction, self.loc.errors.title, self.loc.errors.too_many_players
+            )
             return
 
         self.no_team = []
@@ -222,18 +253,20 @@ class RegistrationView(View):
         # Adding players to the database
         db = Database()
         all_players_ids = tuple(map(lambda p: p.id, self.team1 + self.team2))
-        registered_ids = tuple(map(
-            lambda row: row[0],
-            await db.fetch(
-                f"SELECT id FROM players WHERE id IN ({', '.join(map(str, all_players_ids))})",
-                fetchall=True
+        registered_ids = tuple(
+            map(
+                lambda row: row[0],
+                await db.fetch(
+                    f"SELECT id FROM players WHERE id IN ({', '.join(map(str, all_players_ids))})",
+                    fetchall=True,
+                ),
             )
-        ))
+        )
         for id in all_players_ids:
             if id not in registered_ids:
                 await db.exec_and_commit(
                     "INSERT INTO players VALUES (?, strftime('%d/%m/%Y','now'), ?, ?, ?, ?, ?, ?)",
-                    (id, "", self.loc.literal, 0, 0, 0, 0)
+                    (id, "", self.loc.literal, 0, 0, 0, 0),
                 )
 
         self.game_started = True
@@ -245,11 +278,9 @@ class RegistrationView(View):
     # noinspection PyMethodMayBeStatic
     async def cancel_callback(self, interaction: Interaction) -> None:
         registration_cancelled_embed = Embed(
-            title=self.loc.commands.game.registration_cancelled,
-            color=Colors.purple
+            title=self.loc.commands.game.registration_cancelled, color=Colors.purple
         )
 
         await interaction.followup.edit_message(
-            interaction.message.id,
-            embed=registration_cancelled_embed, view=None
+            interaction.message.id, embed=registration_cancelled_embed, view=None
         )

@@ -1,7 +1,16 @@
 import asyncio
 from typing import Iterable, Callable, Any
 
-from discord import File, Embed, PartialMessageable, User, Message, Reaction, Interaction, ButtonStyle
+from discord import (
+    File,
+    Embed,
+    PartialMessageable,
+    User,
+    Message,
+    Reaction,
+    Interaction,
+    ButtonStyle,
+)
 from discord.ext.commands import Parameter, Command, Context
 from discord.ui import View, Button, button
 
@@ -55,7 +64,11 @@ def process_param(name: str, param: Parameter, slash: bool) -> str | None:
     if param.required:
         return f"<{param.name}>"
 
-    default = None if not param.default and not isinstance(param.default, bool) else param.default
+    default = (
+        None
+        if not param.default and not isinstance(param.default, bool)
+        else param.default
+    )
     default = f'"{default}"' if isinstance(default, str) else default
     return f"[{param.name}={f'{default}'}]"
 
@@ -72,7 +85,9 @@ def if_command_has_check(command: Command, check: str) -> bool:
     return check in map(lambda check: check.__qualname__.split(".")[0], command.checks)
 
 
-async def send_error(ctx: Context | Interaction | PartialMessageable, title: str, description: str) -> None:
+async def send_error(
+    ctx: Context | Interaction | PartialMessageable, title: str, description: str
+) -> None:
     """
     Sends error message to the given context with given title and description
 
@@ -82,11 +97,7 @@ async def send_error(ctx: Context | Interaction | PartialMessageable, title: str
     :return: None
     """
 
-    error_embed = Embed(
-        title=title,
-        description=description,
-        color=Colors.red
-    )
+    error_embed = Embed(title=title, description=description, color=Colors.red)
 
     if isinstance(ctx, Interaction):  # called from ui
         await ctx.followup.send(embed=error_embed, ephemeral=True)
@@ -101,7 +112,11 @@ async def send_error(ctx: Context | Interaction | PartialMessageable, title: str
 
 
 async def send_alert(
-    interaction: Interaction, loc: Localization, action: str, callback: Callable, *params: Any
+    interaction: Interaction,
+    loc: Localization,
+    action: str,
+    callback: Callable,
+    *params: Any,
 ) -> None:
     """
     Sends an alert to the given :class:`Interaction` with the given action and callback
@@ -118,10 +133,10 @@ async def send_alert(
         embed=Embed(
             title=loc.ui.alert_title,
             description=loc.ui.alert_desc.format(action),
-            color=Colors.purple
+            color=Colors.purple,
         ),
         view=AlertView(loc, callback, *params),
-        ephemeral=True
+        ephemeral=True,
     )
 
 
@@ -138,7 +153,9 @@ async def count_certain_reacted_users(reaction: Reaction, users: Iterable[User])
 
 
 # noinspection PyTypeChecker
-async def most_count_reaction_emojis(msg: Message, counted_users: Iterable[User]) -> tuple[str]:
+async def most_count_reaction_emojis(
+    msg: Message, counted_users: Iterable[User]
+) -> tuple[str]:
     """
     Returns emojis that were reacted to the most by given users, for given :class:`Message`
 
@@ -148,16 +165,24 @@ async def most_count_reaction_emojis(msg: Message, counted_users: Iterable[User]
     """
 
     filtered_reactions = tuple(filter(lambda r: r.me, msg.reactions))
-    counts = [await count_certain_reacted_users(r, counted_users) for r in filtered_reactions]
-    max_reactions = tuple(map(
-        lambda pair: pair[0],
-        filter(lambda pair: pair[1] == max(counts), zip(filtered_reactions, counts))
-    ))
+    counts = [
+        await count_certain_reacted_users(r, counted_users) for r in filtered_reactions
+    ]
+    max_reactions = tuple(
+        map(
+            lambda pair: pair[0],
+            filter(
+                lambda pair: pair[1] == max(counts), zip(filtered_reactions, counts)
+            ),
+        )
+    )
     return tuple(map(lambda r: r.emoji, max_reactions))
 
 
 # noinspection PyUnboundLocalVariable
-async def pros_and_cons(msg: Message, delay: float, counted_users: Iterable[User]) -> tuple[int, int]:
+async def pros_and_cons(
+    msg: Message, delay: float, counted_users: Iterable[User]
+) -> tuple[int, int]:
     """
     Starts a "pros and cons" vote for the given :class:`Message` with the given delay to wait for users to react.
 
@@ -173,7 +198,9 @@ async def pros_and_cons(msg: Message, delay: float, counted_users: Iterable[User
     await msg.add_reaction("👎")
     await asyncio.sleep(delay)
 
-    new_msg = await msg.channel.fetch_message(msg.id)  # Have to get the message object again with reactions in it
+    new_msg = await msg.channel.fetch_message(
+        msg.id
+    )  # Have to get the message object again with reactions in it
     reactions = filter(lambda r: r.emoji in "👍👎", new_msg.reactions)
     for reaction in reactions:
         if reaction.emoji == "👍":
@@ -185,7 +212,11 @@ async def pros_and_cons(msg: Message, delay: float, counted_users: Iterable[User
 
 
 async def send_fields(
-    game_uuid: str, channel: PartialMessageable, first_cap: User, second_cap: User, send_to_caps: bool = True
+    game_uuid: str,
+    channel: PartialMessageable,
+    first_cap: User,
+    second_cap: User,
+    send_to_caps: bool = True,
 ) -> None:
     """
     Sends fields to the game text channel (player filed) and to the captains (captain field)
@@ -201,5 +232,9 @@ async def send_fields(
     await channel.send(file=File(Paths.pl_img(game_uuid), filename="player_field.png"))
 
     if send_to_caps:
-        await first_cap.send(file=File(Paths.cap_img(game_uuid), filename="captain_field.png"))
-        await second_cap.send(file=File(Paths.cap_img(game_uuid), filename="captain_field.png"))
+        await first_cap.send(
+            file=File(Paths.cap_img(game_uuid), filename="captain_field.png")
+        )
+        await second_cap.send(
+            file=File(Paths.cap_img(game_uuid), filename="captain_field.png")
+        )

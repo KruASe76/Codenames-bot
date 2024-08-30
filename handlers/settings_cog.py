@@ -21,17 +21,26 @@ class SettingsCog(Cog, name="settings"):
         loc = await self.bot.db.localization(ctx)
 
         if ctx.guild:
-            await self.bot.db.exec_and_commit("UPDATE guilds SET prefix = ? WHERE id = ?", (new_prefix, ctx.guild.id))
+            await self.bot.db.exec_and_commit(
+                "UPDATE guilds SET prefix = ? WHERE id = ?", (new_prefix, ctx.guild.id)
+            )
         else:
-            await self.bot.db.exec_and_commit("UPDATE players SET prefix = ? WHERE id = ?", (new_prefix, ctx.author.id))
+            await self.bot.db.exec_and_commit(
+                "UPDATE players SET prefix = ? WHERE id = ?",
+                (new_prefix, ctx.author.id),
+            )
 
-        await ctx.send(embed=Embed(
-            title=loc.commands.prefix.prefix_changed_title,
-            description=loc.commands.prefix.prefix_changed_desc.format(
-                loc.commands.prefix.new_prefix.format(new_prefix) if new_prefix else loc.commands.prefix.prefix_deleted
-            ),
-            color=Colors.purple
-        ))
+        await ctx.send(
+            embed=Embed(
+                title=loc.commands.prefix.prefix_changed_title,
+                description=loc.commands.prefix.prefix_changed_desc.format(
+                    loc.commands.prefix.new_prefix.format(new_prefix)
+                    if new_prefix
+                    else loc.commands.prefix.prefix_deleted
+                ),
+                color=Colors.purple,
+            )
+        )
 
     @hybrid_command(aliases=("lang",), description=locale_str("language"))
     @is_moderator()
@@ -40,8 +49,10 @@ class SettingsCog(Cog, name="settings"):
 
         language_embed = Embed(
             title=loc.commands.language.title,
-            description=loc.commands.language.desc_current.format(loc.literal.upper(), flags_loc[loc.literal]),
-            color=Colors.purple
+            description=loc.commands.language.desc_current.format(
+                loc.literal.upper(), flags_loc[loc.literal]
+            ),
+            color=Colors.purple,
         )
 
         await ctx.send(embed=language_embed, view=LocalizationView())

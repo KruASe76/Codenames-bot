@@ -69,6 +69,7 @@ class HelpCommand:
     hint: str
     command: str
 
+
 @dataclass  # noqa: E302
 class GameCommand:
     registration: str
@@ -81,6 +82,7 @@ class GameCommand:
     no_team: str
     empty_list: str
 
+
 @dataclass  # noqa: E302
 class StartCommand:
     lang_selection_title: str
@@ -91,6 +93,7 @@ class StartCommand:
     cap_selection_desc: str
     cap_selected_title: str
     cap_selected_desc: str
+
 
 @dataclass  # noqa: E302
 class StatsCommand:
@@ -105,6 +108,7 @@ class StatsCommand:
     note: str
     egg_game_master_desc: str
 
+
 @dataclass  # noqa: E302
 class PrefixCommand:
     prefix_changed_title: str
@@ -112,12 +116,14 @@ class PrefixCommand:
     new_prefix: str
     prefix_deleted: str
 
+
 @dataclass  # noqa: E302
 class LanguageCommand:
     title: str
     desc_current: str
     desc_set: str
     desc_aborted: str
+
 
 @dataclass  # noqa: E302
 class Commands:
@@ -191,12 +197,12 @@ messages = {
             start_notification_title="Game started",
             start_notification_desc_cap="**You are the captain of the {} team**\n\nYour teammates are:\n{}",
             start_notification_desc_pl="**You're a member of the {} team**\n\nThe captain of your team is {}\n\n"
-                                       "Your teammates are:\n{}",
+            "Your teammates are:\n{}",
             waiting_title="Waiting for move",
             waiting_desc_cap="Captain of **{}** team",
             waiting_desc_pl="Players of **{}** team",
             pl_move_instructions="Type words you want to open in response messages.\n"
-                                 "To **FINISH THE MOVE** type **`0`**\nTo **STOP THE GAME** type **`000`**",
+            "To **FINISH THE MOVE** type **`0`**\nTo **STOP THE GAME** type **`000`**",
             cap_move_request_title="Your turn",
             cap_move_request_desc="Type a word and a number in response message, for example: **`{}`**",
             cap_move_accepted="Move accepted",
@@ -231,7 +237,7 @@ messages = {
             game_stopped_title="GAME STOPPED",
             game_stopped_desc="Most players voted for game stopping",
             game_continued_title="GAME CONTINUES",
-            game_continued_desc="Most players voted against game stopping"
+            game_continued_desc="Most players voted against game stopping",
         ),
         help={
             "help": HelpAndBrief(
@@ -240,12 +246,8 @@ messages = {
             "help_command_param": HelpAndBrief(
                 help="The command to show detailed help for"
             ),
-            "game": HelpAndBrief(
-                help="Start registration for a new game"
-            ),
-            "stats": HelpAndBrief(
-                help="Show player's statistics"
-            ),
+            "game": HelpAndBrief(help="Start registration for a new game"),
+            "stats": HelpAndBrief(help="Show player's statistics"),
             "stats_member_param": HelpAndBrief(
                 help="Server member whose statistics will be displayed"
             ),
@@ -254,24 +256,16 @@ messages = {
             ),
             "prefix": HelpAndBrief(
                 help="Change the text command prefix\nTo set it to default (**`cdn`**) do not provide any.",
-                brief="Change the text command prefix, empty prefix - default"
+                brief="Change the text command prefix, empty prefix - default",
             ),
-            "prefix_new_prefix_param": HelpAndBrief(
-                help="New text command prefix"
-            ),
+            "prefix_new_prefix_param": HelpAndBrief(help="New text command prefix"),
             "language": HelpAndBrief(
                 help="Change the language of the bot's messages (**EN**/**RU**)"
-            )
+            ),
         },
         cogs={
-            "game": CogName(
-                singular="Game command",
-                plural="Game commands"
-            ),
-            "settings": CogName(
-                singular="Setting command",
-                plural="Setting commands"
-            )
+            "game": CogName(singular="Game command", plural="Game commands"),
+            "settings": CogName(singular="Setting command", plural="Setting commands"),
         },
         commands=Commands(
             help=HelpCommand(
@@ -280,10 +274,10 @@ messages = {
                 moderator="Moderator",
                 moderator_shortened="Mod",
                 about_moderator="Moderator is the member who can manage messages in the channel where the command was "
-                                "called",
+                "called",
                 note="Note",
                 hint="Learn a more detailed description of the command:",
-                command="command"
+                command="command",
             ),
             game=GameCommand(
                 registration="Registration",
@@ -294,7 +288,7 @@ messages = {
                 team1="Team 1",
                 team2="Team 2",
                 no_team="No team",
-                empty_list="Nobody is ready to play :("
+                empty_list="Nobody is ready to play :(",
             ),
             start=StartCommand(
                 lang_selection_title="Select game language",
@@ -304,7 +298,7 @@ messages = {
                 cap_selection_title="**{}** team: Voting for the captain",
                 cap_selection_desc="**R** - Random captain\n\n{}\n\nYou have 15 seconds to vote",
                 cap_selected_title="**{}** team: Captain selected",
-                cap_selected_desc="Your captain is {}"
+                cap_selected_desc="Your captain is {}",
             ),
             stats=StatsCommand(
                 smbs_stats="{}'s statistics",
@@ -316,21 +310,21 @@ messages = {
                 games_won="Games won",
                 winrate="Winrate",
                 note="Codenames is a **team game**, so the winrate statistics **do not** exactly reflect player's "
-                     "skill",
-                egg_game_master_desc="Best game master: **100%**"
+                "skill",
+                egg_game_master_desc="Best game master: **100%**",
             ),
             prefix=PrefixCommand(
                 prefix_changed_title="Prefix changed",
                 prefix_changed_desc="{}\nSlash-commands, default one **`cdn`** and bot ping are still valid",
                 new_prefix="New prefix:\n**`{}`**\n",
-                prefix_deleted="Custom prefix deleted"
+                prefix_deleted="Custom prefix deleted",
             ),
             language=LanguageCommand(
                 title="Language settings",
                 desc_current="**Current language: {} {}**\n\n_Select new language:_\n\n",
                 desc_set="**Language is set to {} {}**",
-                desc_aborted="Aborted"
-            )
+                desc_aborted="Aborted",
+            ),
         ),
         ui=UI(
             alert_title="Alert",
@@ -340,7 +334,7 @@ messages = {
             random="Random team",
             leave="Leave",
             start_game="Start the game",
-            cancel_reg="Cancel the registration"
+            cancel_reg="Cancel the registration",
         ),
         errors=Errors(
             title="Error",
@@ -352,8 +346,8 @@ messages = {
             invalid_command="Invalid command",
             not_enough_players="**Not enough players**\n**Each** team must have **at least 2** players.",
             too_many_players="**Too much players**\n**Each** team must have **no more than 25** players.",
-            never_played="{} haven't played Codenames yet"
-        )
+            never_played="{} haven't played Codenames yet",
+        ),
     ),
     "ru": Localization(
         literal="ru",
@@ -364,12 +358,12 @@ messages = {
             start_notification_title="Игра началась",
             start_notification_desc_cap="**Вы - капитан команды {}**\n\nС Вами в команде:\n{}",
             start_notification_desc_pl="**Вы - участник команды {}**\n\nКапитан Вашей команды - {}\n\nС Вами в "
-                                       "команде:\n{}",
+            "команде:\n{}",
             waiting_title="Ожидание хода",
             waiting_desc_cap="Капитан команды **{}**",
             waiting_desc_pl="Игроки команды **{}**",
             pl_move_instructions="В ответных сообщениях напишите слова, которые вы хотите открыть.\nЧтобы "
-                                 "**ЗАКОНЧИТЬ ХОД**, напишите **`0`**\nЧтобы **ОСТАНОВИТЬ ИГРУ**, напишите **`000`**",
+            "**ЗАКОНЧИТЬ ХОД**, напишите **`0`**\nЧтобы **ОСТАНОВИТЬ ИГРУ**, напишите **`000`**",
             cap_move_request_title="Ваш ход",
             cap_move_request_desc="В ответном сообщении напишите слово и число, например: **`{}`**",
             cap_move_accepted="Ход принят",
@@ -389,7 +383,7 @@ messages = {
             miss_desc_endgame_dm="Ваша команда открыла слово **`{}`**, которое **положит конец игре**",
             opponents_miss_title="Промах оппонента",
             opponents_miss_desc="Команда противника открыла слово **`{}`**, "
-                                "которое **не принадлежит ни одной команде**",
+            "которое **не принадлежит ни одной команде**",
             lucky_title="Удача!",
             lucky_desc_your_team="Команда противника открыла слово **`{}`**, которое **принадлежит вашей команде**",
             lucky_desc_endgame="Команда противника открыла слово **`{}`**, которое **положит конец игре**",
@@ -402,11 +396,11 @@ messages = {
             your_team_lost_desc="Удачи в следующей игре!",
             voting_for_stopping_title="Остановка игры",
             voting_for_stopping_desc="**Вы уверены, что хотите прекратить игру?**\n\n"
-                                     "Всем игрокам на голосование дается 15 секунд",
+            "Всем игрокам на голосование дается 15 секунд",
             game_stopped_title="ИГРА ПРЕКРАЩЕНА",
             game_stopped_desc="Большинство игроков проголосовало за остановку игры",
             game_continued_title="ИГРА ПРОДОЛЖАЕТСЯ",
-            game_continued_desc="Большинство игроков проголосовало против остановки игры"
+            game_continued_desc="Большинство игроков проголосовало против остановки игры",
         ),
         help={
             "help": HelpAndBrief(
@@ -415,39 +409,27 @@ messages = {
             "help_command_param": HelpAndBrief(
                 help="Команда, для которой будет выведено подробное описание"
             ),
-            "game": HelpAndBrief(
-                help="Запустить регистрацию на новую игру"
-            ),
-            "stats": HelpAndBrief(
-                help="Показать статистику игрока"
-            ),
+            "game": HelpAndBrief(help="Запустить регистрацию на новую игру"),
+            "stats": HelpAndBrief(help="Показать статистику игрока"),
             "stats_member_param": HelpAndBrief(
                 help="Участник сервера, чья статистика будет выведена"
             ),
-            "stats_show_param": HelpAndBrief(
-                help="Будет ли сообщение видно всем"
-            ),
+            "stats_show_param": HelpAndBrief(help="Будет ли сообщение видно всем"),
             "prefix": HelpAndBrief(
                 help="Изменить префикс для текстовых команд\nЧтобы сбросить до префикса по умолчанию (**`cdn`**), "
-                     "новый указывать не нужно.",
-                brief="Изменить префикс для текстовых команд, пустой префикс - по умолчанию"
+                "новый указывать не нужно.",
+                brief="Изменить префикс для текстовых команд, пустой префикс - по умолчанию",
             ),
             "prefix_new_prefix_param": HelpAndBrief(
                 help="Новый префикс для текстовых команд"
             ),
             "language": HelpAndBrief(
                 help="Изменить язык сообщений бота (**РУС**/**АНГ**)"
-            )
+            ),
         },
         cogs={
-            "game": CogName(
-                singular="Команда для игры",
-                plural="Команды для игры"
-            ),
-            "settings": CogName(
-                singular="Команда настроек",
-                plural="Команды настроек"
-            )
+            "game": CogName(singular="Команда для игры", plural="Команды для игры"),
+            "settings": CogName(singular="Команда настроек", plural="Команды настроек"),
         },
         commands=Commands(
             help=HelpCommand(
@@ -456,10 +438,10 @@ messages = {
                 moderator="Модератор",
                 moderator_shortened="Модер",
                 about_moderator="Модератор - это пользователь, который имеет право управления сообщениями в канале, "
-                                "где была вызвана команда",
+                "где была вызвана команда",
                 note="Заметка",
                 hint="Получить более подробное описание команды:",
-                command="команда"
+                command="команда",
             ),
             game=GameCommand(
                 registration="Регистрация",
@@ -470,7 +452,7 @@ messages = {
                 team1="Команда 1",
                 team2="Команда 2",
                 no_team="Случайная команда",
-                empty_list="Никто не готов играть :("
+                empty_list="Никто не готов играть :(",
             ),
             start=StartCommand(
                 lang_selection_title="Выберите язык игры",
@@ -480,7 +462,7 @@ messages = {
                 cap_selection_title="Команда **{}**: Голосование за капитана",
                 cap_selection_desc="**R** - Случайный капитан\n\n{}\n\nНа голосование дается 15 секунд",
                 cap_selected_title="Команда **{}**: Капитан выбран",
-                cap_selected_desc="Ваш капитан - {}"
+                cap_selected_desc="Ваш капитан - {}",
             ),
             stats=StatsCommand(
                 smbs_stats="Статистика {}",
@@ -492,22 +474,22 @@ messages = {
                 games_won="Победы",
                 winrate="Винрейт",
                 note="Codenames - **командная игра**, поэтому статистика побед игрока **не может** точно отражать его "
-                     "мастерство",
-                egg_game_master_desc="Лучший ведущий: **100%**"
+                "мастерство",
+                egg_game_master_desc="Лучший ведущий: **100%**",
             ),
             prefix=PrefixCommand(
                 prefix_changed_title="Префикс изменен",
                 prefix_changed_desc="{}\nСлеш-команды, "
-                                    "установленный по умолчанию **`cdn`** и пинг бота все также работают",
+                "установленный по умолчанию **`cdn`** и пинг бота все также работают",
                 new_prefix="Новый префикс:\n**`{}`**\n",
-                prefix_deleted="Префикс сервера сброшен"
+                prefix_deleted="Префикс сервера сброшен",
             ),
             language=LanguageCommand(
                 title="Настройки языка",
                 desc_current="**Установленный язык: {} {}**\n\n_Выберите новый язык:_\n\n",
                 desc_set="**Язык установлен на {} {}**",
-                desc_aborted="Отменено"
-            )
+                desc_aborted="Отменено",
+            ),
         ),
         ui=UI(
             alert_title="Предупреждение",
@@ -517,7 +499,7 @@ messages = {
             random="Случайная команда",
             leave="Выйти",
             start_game="Начать игру",
-            cancel_reg="Отменить регистрацию"
+            cancel_reg="Отменить регистрацию",
         ),
         errors=Errors(
             title="Ошибка",
@@ -529,7 +511,7 @@ messages = {
             invalid_command="Такой команды не существует",
             not_enough_players="**Недостаточно игроков**\nВ **каждой** команде должно быть **хотя бы 2** игрока.",
             too_many_players="**Слишком много игроков**\nВ **каждой** команде должно быть **не более 25** игроков.",
-            never_played="{} еще не играл в Codenames"
-        )
-    )
+            never_played="{} еще не играл в Codenames",
+        ),
+    ),
 }

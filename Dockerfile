@@ -1,4 +1,4 @@
-FROM python:3.11.4-alpine
+FROM python:3.12.5-alpine
 
 WORKDIR /bot
 
@@ -7,4 +7,4 @@ RUN pip3 install -r requirements.txt
 
 COPY . .
 
-CMD python3 main.py
+CMD ["python3", "main.py"]

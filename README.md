@@ -1,6 +1,6 @@
 # Codenames-bot
 
-### Bot is down. More info: [#1][issue-1]
+<!-- ### Bot is down. More info: [#1][issue-1] -->
 [![Invite to server](https://img.shields.io/badge/INVITE%20TO%20SERVER-555555?style=for-the-badge&logo=discord&logoWidth=32&logoColor=ffffff&labelColor=5865f2)](https://discord.com/api/oauth2/authorize?client_id=841776986246348851&permissions=274878015552&scope=bot%20applications.commands)
 
 

@@ -57,13 +57,12 @@ class Database:
 
         await cls._db.close()
 
-
     async def fetch(
         self,
         sql: str,
         parameters: Iterable[Any] | None = None,
         *,
-        fetchall: bool = False
+        fetchall: bool = False,
     ) -> tuple[Any] | None:
         """
         Executes the given SQL query and returns the result.
@@ -80,7 +79,9 @@ class Database:
 
         return tuple(res) if res else (tuple() if fetchall else None)
 
-    async def exec_and_commit(self, sql: str, parameters: Iterable[Any] | None = None) -> None:
+    async def exec_and_commit(
+        self, sql: str, parameters: Iterable[Any] | None = None
+    ) -> None:
         """
         Executes the given SQL statement with changes to the database and commits them.
 
@@ -92,7 +93,6 @@ class Database:
         await self._db.execute(sql, parameters)
         await self._db.commit()
 
-
     async def localization(self, ctx: Context | Interaction) -> Localization:
         """
         Determines which language the bot should use.
@@ -102,18 +102,26 @@ class Database:
         """
 
         if ctx.guild:
-            request = await self.fetch("SELECT localization FROM guilds WHERE id = ?", (ctx.guild.id,))
+            request = await self.fetch(
+                "SELECT localization FROM guilds WHERE id = ?", (ctx.guild.id,)
+            )
 
             if not request:  # should not normally happen
-                await self.exec_and_commit("INSERT INTO guilds VALUES (?, ?, ?)", (ctx.guild.id, "", "en"))
+                await self.exec_and_commit(
+                    "INSERT INTO guilds VALUES (?, ?, ?)", (ctx.guild.id, "", "en")
+                )
         else:
             user_id = ctx.author.id if isinstance(ctx, Context) else ctx.user.id
-            request = await self.fetch("SELECT localization FROM players WHERE id = ?", (user_id,))
+            request = await self.fetch(
+                "SELECT localization FROM players WHERE id = ?", (user_id,)
+            )
 
-            if not request:  # if the user sends a slash command to the bot as the first use in DMs
+            if (
+                not request
+            ):  # if the user sends a slash command to the bot as the first use in DMs
                 await self.exec_and_commit(
                     "INSERT INTO players VALUES (?, strftime('%d/%m/%Y','now'), ?, ?, ?, ?, ?, ?)",
-                    (user_id, "", "en", 0, 0, 0, 0)
+                    (user_id, "", "en", 0, 0, 0, 0),
                 )
 
         return messages[request[0]] if request else messages["en"]
@@ -128,14 +136,16 @@ class Database:
         """
 
         if not (
-            current_stats := await self.fetch(f"SELECT {', '.join(stats)} FROM players WHERE id = ?", (player_id,))
+            current_stats := await self.fetch(
+                f"SELECT {', '.join(stats)} FROM players WHERE id = ?", (player_id,)
+            )
         ):  # should not normally happen
             await self.exec_and_commit(
                 "INSERT INTO players VALUES (?, strftime('%d/%m/%Y','now'), ?, ?, ?, ?, ?, ?)",
-                (player_id, "", "en", 0, 0, 0, 0)
+                (player_id, "", "en", 0, 0, 0, 0),
             )
 
         await self.exec_and_commit(
             f"UPDATE players SET {' = ?, '.join(stats)} = ? WHERE id = ?",
-            (*map(lambda stat: stat + 1, current_stats), player_id)
+            (*map(lambda stat: stat + 1, current_stats), player_id),
         )
